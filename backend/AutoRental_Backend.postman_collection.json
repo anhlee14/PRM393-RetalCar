@@ -19,6 +19,16 @@
       "key": "token_renter",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "refresh_token_owner",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token_renter",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -34,9 +44,10 @@
               "script": {
                 "exec": [
                   "var jsonData = pm.response.json();",
-                  "if (jsonData.success && jsonData.data && jsonData.data.token) {",
-                  "    pm.collectionVariables.set('token_owner', jsonData.data.token);",
-                  "    console.log('Đã tự động lưu token_owner thành công!');",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    if (jsonData.data.token) pm.collectionVariables.set(\"token_owner\", jsonData.data.token);",
+                  "    if (jsonData.data.refreshToken) pm.collectionVariables.set(\"refresh_token_owner\", jsonData.data.refreshToken);",
+                  "    console.log(\"Đã tự động lưu token_owner và refresh_token_owner!\");",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -45,7 +56,12 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"username\": \"owner@gmail.com\",\n  \"password\": \"123456\"\n}"
@@ -62,9 +78,10 @@
               "script": {
                 "exec": [
                   "var jsonData = pm.response.json();",
-                  "if (jsonData.success && jsonData.data && jsonData.data.token) {",
-                  "    pm.collectionVariables.set('token_renter', jsonData.data.token);",
-                  "    console.log('Đã tự động lưu token_renter thành công!');",
+                  "if (jsonData.success && jsonData.data) {",
+                  "    if (jsonData.data.token) pm.collectionVariables.set(\"token_renter\", jsonData.data.token);",
+                  "    if (jsonData.data.refreshToken) pm.collectionVariables.set(\"refresh_token_renter\", jsonData.data.refreshToken);",
+                  "    console.log(\"Đã tự động lưu token_renter và refresh_token_renter!\");",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -73,7 +90,12 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"username\": \"renter@gmail.com\",\n  \"password\": \"123456\"\n}"
@@ -86,7 +108,12 @@
           "name": "1.3 Đăng ký tài khoản mới",
           "request": {
             "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"fullName\": \"Trần Văn Mới\",\n  \"email\": \"newuser@gmail.com\",\n  \"phone\": \"0912345678\",\n  \"password\": \"123456\",\n  \"role\": \"ROLE_RENTER\",\n  \"cccdNumber\": \"012345678901\",\n  \"driverLicense\": \"B2-554433\"\n}"
@@ -100,7 +127,10 @@
           "request": {
             "method": "GET",
             "header": [
-              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_renter}}"
+              }
             ],
             "url": "{{base_url}}/api/auth/me",
             "description": "**Mục đích:** Lấy thông tin cá nhân của người đang đăng nhập hiển thị lên màn hình Profile."
@@ -111,8 +141,14 @@
           "request": {
             "method": "PUT",
             "header": [
-              {"key": "Content-Type", "value": "application/json"},
-              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_renter}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -120,6 +156,46 @@
             },
             "url": "{{base_url}}/api/auth/switch-role",
             "description": "**Mục đích:** Chuyển đổi qua lại giữa vai trò Khách thuê (ROLE_RENTER) và Chủ xe (ROLE_OWNER)."
+          }
+        },
+        {
+          "name": "1.6 Làm mới JWT (Refresh Token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh_token_renter}}\"\n}"
+            },
+            "url": "{{base_url}}/api/auth/refresh",
+            "description": "**Mục đích:** Khi JWT hết hạn, gửi Refresh Token lên để nhận Access Token mới."
+          }
+        },
+        {
+          "name": "1.7 Cập nhật thông tin Profile (PUT /api/users/me)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_renter}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Trần Văn Mới (VIP)\",\n  \"phone\": \"0912345678\",\n  \"avatarUrl\": \"https://placehold.co/200x200.png\",\n  \"cccdNumber\": \"012345678901\",\n  \"driverLicense\": \"B2-554433\"\n}"
+            },
+            "url": "{{base_url}}/api/users/me",
+            "description": "**Mục đích:** Khách hoặc chủ xe cập nhật họ tên, SĐT, ảnh đại diện, CCCD/GPLX."
           }
         }
       ]
@@ -141,8 +217,14 @@
           "request": {
             "method": "POST",
             "header": [
-              {"key": "Content-Type", "value": "application/json"},
-              {"key": "Authorization", "value": "Bearer {{token_owner}}"}
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_owner}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -157,7 +239,10 @@
           "request": {
             "method": "GET",
             "header": [
-              {"key": "Authorization", "value": "Bearer {{token_owner}}"}
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_owner}}"
+              }
             ],
             "url": "{{base_url}}/api/vehicles/owner",
             "description": "**Mục đích:** Màn hình quản lý xe của Chủ xe hiển thị danh sách xe của mình và tình trạng (AVAILABLE, RENTED, MAINTENANCE)."
@@ -167,13 +252,54 @@
           "name": "2.4 Thuật toán Matching (Tính % độ khớp)",
           "request": {
             "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"budget\": 1300000,\n  \"need_driver\": true,\n  \"user_lat\": 21.0131,\n  \"user_lng\": 105.5255,\n  \"vehicle_type\": \"SUV\",\n  \"budget_weight\": 0.25,\n  \"distance_weight\": 0.20,\n  \"driver_weight\": 0.30,\n  \"type_weight\": 0.15,\n  \"rating_weight\": 0.10\n}"
             },
             "url": "{{base_url}}/api/vehicles/match",
             "description": "**Nghiệp vụ 4 (Matching Algorithm):**\n- Tính điểm phần trăm (0 - 100%) dựa trên công thức Haversine (khoảng cách toạ độ km), độ lệch ngân sách, yêu cầu tài xế và loại xe.\n- Kết quả trả về `match_score` và `match_label` (ví dụ: 'Rất phù hợp (95.4%)')."
+          }
+        },
+        {
+          "name": "2.5 Cập nhật thông tin xe (PUT /api/vehicles/{id})",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_owner}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"VinFast VF8 Plus 2024 (Đã nâng cấp)\",\n  \"brand\": \"VinFast\",\n  \"model_year\": 2024,\n  \"license_plate\": \"30K-888.88\",\n  \"vehicle_type\": \"SUV\",\n  \"transmission\": \"AUTO\",\n  \"fuel_type\": \"ELECTRIC\",\n  \"base_price_per_day\": 1350000,\n  \"has_driver_option\": true,\n  \"driver_fee_per_day\": 500000,\n  \"seats\": 5,\n  \"description\": \"Xe vừa được nâng cấp nội thất da cao cấp\",\n  \"address\": \"Hòa Lạc, Hà Nội\",\n  \"current_lat\": 21.0131,\n  \"current_lng\": 105.5255,\n  \"thumbnail_url\": \"http://localhost:8080/uploads/vehicles/vf8.jpg\"\n}"
+            },
+            "url": "{{base_url}}/api/vehicles/1",
+            "description": "**Mục đích:** Chủ xe sửa thông tin xe, giá thuê, phụ phí tài xế..."
+          }
+        },
+        {
+          "name": "2.6 Xóa hẳn xe (DELETE /api/vehicles/{id})",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_owner}}"
+              }
+            ],
+            "url": "{{base_url}}/api/vehicles/3",
+            "description": "**Mục đích:** Chủ xe xóa hoàn toàn xe khỏi hệ thống (kiểm tra an toàn: nếu xe đang có chuyến đi hoạt động sẽ từ chối)."
           }
         }
       ]
@@ -187,8 +313,14 @@
           "request": {
             "method": "POST",
             "header": [
-              {"key": "Content-Type", "value": "application/json"},
-              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_renter}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -203,7 +335,10 @@
           "request": {
             "method": "PUT",
             "header": [
-              {"key": "Authorization", "value": "Bearer {{token_owner}}"}
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_owner}}"
+              }
             ],
             "url": "{{base_url}}/api/bookings/1/confirm",
             "description": "**Mục đích:** Chủ xe xác nhận duyệt đơn. Xe chuyển sang trạng thái RENTED, đơn chuyển sang CONFIRMED."
@@ -214,7 +349,10 @@
           "request": {
             "method": "PUT",
             "header": [
-              {"key": "Authorization", "value": "Bearer {{token_owner}}"}
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_owner}}"
+              }
             ],
             "url": "{{base_url}}/api/bookings/1/start",
             "description": "**Mục đích:** Khách nhận xe, chuyến đi chuyển sang ONGOING và bắt đầu kích hoạt đồng hồ giám sát GPS."
@@ -225,7 +363,10 @@
           "request": {
             "method": "GET",
             "header": [
-              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_renter}}"
+              }
             ],
             "url": "{{base_url}}/api/bookings/renter",
             "description": "**Mục đích:** Lịch sử các đơn thuê xe của khách thuê (PENDING, CONFIRMED, ONGOING, COMPLETED)."
@@ -236,7 +377,10 @@
           "request": {
             "method": "PUT",
             "header": [
-              {"key": "Authorization", "value": "Bearer {{token_owner}}"}
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_owner}}"
+              }
             ],
             "url": "{{base_url}}/api/bookings/1/complete",
             "description": "**Mục đích:** Kết thúc chuyến xe sau khi bàn giao đối chiếu ảnh xong. Xe tự động chuyển về AVAILABLE để đón khách tiếp theo."
@@ -253,8 +397,14 @@
           "request": {
             "method": "POST",
             "header": [
-              {"key": "Content-Type", "value": "application/json"},
-              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_renter}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -269,7 +419,10 @@
           "request": {
             "method": "GET",
             "header": [
-              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_renter}}"
+              }
             ],
             "url": "{{base_url}}/api/payments/booking/1",
             "description": "**Mục đích:** Lấy danh sách các giao dịch thanh toán đã thực hiện cho đơn thuê xe này."
@@ -286,8 +439,14 @@
           "request": {
             "method": "POST",
             "header": [
-              {"key": "Content-Type", "value": "application/json"},
-              {"key": "Authorization", "value": "Bearer {{token_owner}}"}
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_owner}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -302,8 +461,14 @@
           "request": {
             "method": "POST",
             "header": [
-              {"key": "Content-Type", "value": "application/json"},
-              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_renter}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -318,7 +483,10 @@
           "request": {
             "method": "GET",
             "header": [
-              {"key": "Authorization", "value": "Bearer {{token_owner}}"}
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_owner}}"
+              }
             ],
             "url": "{{base_url}}/api/inspections/1/comparison",
             "description": "**Nghiệp vụ 3 (Comparison View):**\n- Trả về song song ảnh CHECK_IN và CHECK_OUT để mobile hiển thị so sánh.\n- Tự tính chênh lệch ODO (280.5 km) và chênh lệch xăng (-15%)."
@@ -329,7 +497,10 @@
           "request": {
             "method": "PUT",
             "header": [
-              {"key": "Authorization", "value": "Bearer {{token_owner}}"}
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_owner}}"
+              }
             ],
             "url": "{{base_url}}/api/inspections/1/confirm",
             "description": "**Mục đích:** Chủ xe hoặc Khách bấm xác nhận đồng ý không có tranh chấp xước xát để hoàn trả cọc."
@@ -346,8 +517,14 @@
           "request": {
             "method": "POST",
             "header": [
-              {"key": "Content-Type", "value": "application/json"},
-              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_renter}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -362,7 +539,10 @@
           "request": {
             "method": "GET",
             "header": [
-              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_renter}}"
+              }
             ],
             "url": "{{base_url}}/api/gps/renter-route/1",
             "description": "**Nghiệp vụ 2 (Full Route):** Khách thuê được xem toàn bộ danh sách toạ độ xe đã đi qua để vẽ đường đi trên bản đồ."
@@ -373,7 +553,10 @@
           "request": {
             "method": "GET",
             "header": [
-              {"key": "Authorization", "value": "Bearer {{token_owner}}"}
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_owner}}"
+              }
             ],
             "url": "{{base_url}}/api/gps/owner-snapshot/1",
             "description": "**Nghiệp vụ 2 (Owner Snapshot & Privacy):**\n- Chủ xe KHÔNG được xem toàn bộ lộ trình di chuyển của khách.\n- Chỉ xem 1 điểm toạ độ mới nhất.\n- Tối đa 20 lần / ngày. Trường `remaining_checks_today` đếm lùi: 19, 18... Nếu check quá 20 lần -> HTTP 429 Too Many Requests."
@@ -384,7 +567,10 @@
           "request": {
             "method": "GET",
             "header": [
-              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_renter}}"
+              }
             ],
             "url": "{{base_url}}/api/gps/status/1",
             "description": "**Nghiệp vụ 2 (GPS 1-Hour Status):** Kiểm tra xem đã quá 60 phút kể từ lần ping cuối chưa. Nếu quá -> `is_overdue: true` cảnh báo."
@@ -401,7 +587,10 @@
           "request": {
             "method": "GET",
             "header": [
-              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_renter}}"
+              }
             ],
             "url": "{{base_url}}/api/notifications",
             "description": "**Mục đích:** Lấy danh sách thông báo (cảnh báo GPS, thông báo duyệt đơn thuê...)."
@@ -412,7 +601,10 @@
           "request": {
             "method": "GET",
             "header": [
-              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_renter}}"
+              }
             ],
             "url": "{{base_url}}/api/notifications/unread-count",
             "description": "**Mục đích:** Hiển thị badge số lượng thông báo đỏ trên biểu tượng quả chuông của App."

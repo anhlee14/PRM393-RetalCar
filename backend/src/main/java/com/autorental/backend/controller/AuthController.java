@@ -1,10 +1,13 @@
 package com.autorental.backend.controller;
 
 import com.autorental.backend.dto.request.LoginRequest;
+import com.autorental.backend.dto.request.RefreshTokenRequest;
 import com.autorental.backend.dto.request.RegisterRequest;
 import com.autorental.backend.dto.request.SwitchRoleRequest;
+import com.autorental.backend.dto.request.UpdateProfileRequest;
 import com.autorental.backend.dto.response.ApiResponse;
 import com.autorental.backend.dto.response.JwtResponse;
+import com.autorental.backend.dto.response.TokenRefreshResponse;
 import com.autorental.backend.model.User;
 import com.autorental.backend.service.AuthService;
 import jakarta.validation.Valid;
@@ -31,6 +34,19 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công", jwtResponse));
     }
 
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<TokenRefreshResponse>> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+        TokenRefreshResponse response = authService.refreshToken(request);
+        return ResponseEntity.ok(ApiResponse.success("Làm mới token thành công", response));
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<ApiResponse<User>> updateProfile(@RequestBody UpdateProfileRequest request) {
+        User currentUser = authService.getCurrentUser();
+        User updated = authService.updateProfile(currentUser.getId(), request);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật thông tin cá nhân thành công", updated));
+    }
+
     @PutMapping("/switch-role")
     public ResponseEntity<ApiResponse<User>> switchRole(@Valid @RequestBody SwitchRoleRequest request) {
         User currentUser = authService.getCurrentUser();
@@ -43,5 +59,10 @@ public class AuthController {
         User currentUser = authService.getCurrentUser();
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin người dùng thành công", currentUser));
     }
-}
 
+    @GetMapping("/profile")
+    public ResponseEntity<ApiResponse<User>> getProfile() {
+        User currentUser = authService.getCurrentUser();
+        return ResponseEntity.ok(ApiResponse.success("Lấy thông tin người dùng thành công", currentUser));
+    }
+}

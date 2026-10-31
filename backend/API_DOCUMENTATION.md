@@ -48,14 +48,41 @@
     "password": "123456"
   }
   ```
-* **Dữ liệu trả về:** Chuỗi `token` dạng JWT Bearer, thông tin cơ bản của User và `role`.
+* **Dữ liệu trả về:** Chuỗi `token` dạng JWT Bearer, chuỗi `refreshToken`, thông tin cơ bản của User và `role`.
 
-### 1.3. Lấy thông tin cá nhân hiện tại
-* **Endpoint:** `GET /api/auth/me`
+### 1.3. Làm mới mã truy cập bằng Refresh Token
+* **Endpoint:** `POST /api/auth/refresh`
+* **Mục đích:** Khi Access Token JWT hết hạn, client gửi `refreshToken` lên để nhận Access Token mới mà không bắt người dùng phải đăng nhập lại.
+* **Phân quyền:** Public.
+* **Request Body:**
+  ```json
+  {
+    "refreshToken": "48b6ef44-0c15-46aa-9d5f-141940915a1a"
+  }
+  ```
+* **Dữ liệu trả về:** `accessToken` mới, `refreshToken` và `tokenType: "Bearer"`.
+
+### 1.4. Lấy thông tin cá nhân hiện tại (Profile)
+* **Endpoint:** `GET /api/users/me` hoặc `GET /api/auth/me`
 * **Mục đích:** App dùng để lấy thông tin người dùng đang đăng nhập và hiển thị lên màn hình Profile.
 * **Headers:** `Authorization: Bearer <token>`
 
-### 1.4. Chuyển đổi vai trò (Switch Mode)
+### 1.5. Cập nhật thông tin cá nhân (Profile)
+* **Endpoint:** `PUT /api/users/me` hoặc `PUT /api/auth/profile`
+* **Mục đích:** Cho phép người dùng sửa họ và tên, số điện thoại, đổi avatar, cập nhật CCCD hoặc GPLX.
+* **Headers:** `Authorization: Bearer <token>`
+* **Request Body:**
+  ```json
+  {
+    "fullName": "Nguyễn Văn A (Đã cập nhật)",
+    "phone": "0987654321",
+    "avatarUrl": "http://localhost:8080/uploads/avatars/my-avatar.jpg",
+    "cccdNumber": "001202009988",
+    "driverLicense": "B2-998877"
+  }
+  ```
+
+### 1.6. Chuyển đổi vai trò (Switch Mode)
 * **Endpoint:** `PUT /api/auth/switch-role`
 * **Mục đích:** Cho phép người dùng chuyển nhanh giữa giao diện **Khách thuê (Renter)** và **Chủ xe (Owner)**.
 * **Request Body:** `{"target_role": "ROLE_OWNER"}`
@@ -94,12 +121,24 @@
   }
   ```
 
-### 2.3. Lấy danh sách xe của chính chủ xe
+### 2.3. Cập nhật thông tin xe
+* **Endpoint:** `PUT /api/vehicles/{id}`
+* **Mục đích:** Chủ xe cập nhật lại thông tin tên xe, biển số, bảng giá thuê, phụ phí tài xế, ảnh xe...
+* **Headers:** `Authorization: Bearer <TOKEN_OWNER>`
+* **Request Body:** Tương tự như `POST /api/vehicles`. Hệ thống sẽ xác thực người sửa phải là chủ sở hữu của chiếc xe.
+
+### 2.4. Xóa hẳn xe
+* **Endpoint:** `DELETE /api/vehicles/{id}`
+* **Mục đích:** Chủ xe xóa hoàn toàn chiếc xe khỏi hệ thống.
+* **Headers:** `Authorization: Bearer <TOKEN_OWNER>`
+* **Cơ chế an toàn:** Nếu xe đang có đơn thuê đang hoạt động (`PENDING`, `CONFIRMED`, `ONGOING`), hệ thống sẽ từ chối xóa và trả về thông báo lỗi: *"Không thể xóa xe vì xe đang có chuyến đi hoạt động!"*.
+
+### 2.5. Lấy danh sách xe của chính chủ xe
 * **Endpoint:** `GET /api/vehicles/owner`
 * **Mục đích:** Màn hình "Quản lý xe của tôi" của Chủ xe hiển thị danh sách các xe do mình đăng tải và tình trạng hiện tại (Đang trống, Đang cho thuê, Đang bảo dưỡng).
 * **Headers:** `Authorization: Bearer <TOKEN_OWNER>`
 
-### 2.4. Xem chi tiết 1 xe
+### 2.6. Xem chi tiết 1 xe
 * **Endpoint:** `GET /api/vehicles/{id}`
 * **Mục đích:** Xem thông số kỹ thuật đầy đủ, mô tả chi tiết và danh sách ảnh của xe.
 

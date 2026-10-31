@@ -28,6 +28,22 @@ public class VehicleController {
         return ResponseEntity.ok(ApiResponse.success("Đăng tải xe thành công", vehicle));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<Vehicle>> updateVehicle(
+            @PathVariable Long id,
+            @Valid @RequestBody VehicleRequest request) {
+        User owner = authService.getCurrentUser();
+        Vehicle vehicle = vehicleService.updateVehicle(id, owner, request);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật thông tin xe thành công", vehicle));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteVehicle(@PathVariable Long id) {
+        User owner = authService.getCurrentUser();
+        vehicleService.deleteVehicle(id, owner);
+        return ResponseEntity.ok(ApiResponse.success("Xóa xe thành công", null));
+    }
+
     @GetMapping
     public ResponseEntity<ApiResponse<List<Vehicle>>> getAllAvailableVehicles() {
         List<Vehicle> list = vehicleService.getAllAvailableVehicles();
@@ -47,4 +63,3 @@ public class VehicleController {
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin chi tiết xe thành công", vehicle));
     }
 }
-
