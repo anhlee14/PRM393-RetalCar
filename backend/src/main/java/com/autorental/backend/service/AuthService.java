@@ -1,11 +1,15 @@
 package com.autorental.backend.service;
 
 import com.autorental.backend.dto.request.LoginRequest;
+import com.autorental.backend.dto.request.RefreshTokenRequest;
 import com.autorental.backend.dto.request.RegisterRequest;
 import com.autorental.backend.dto.request.SwitchRoleRequest;
+import com.autorental.backend.dto.request.UpdateProfileRequest;
 import com.autorental.backend.dto.response.JwtResponse;
+import com.autorental.backend.dto.response.TokenRefreshResponse;
 import com.autorental.backend.exception.BadRequestException;
 import com.autorental.backend.exception.ResourceNotFoundException;
+import com.autorental.backend.model.RefreshToken;
 import com.autorental.backend.model.Role;
 import com.autorental.backend.model.User;
 import com.autorental.backend.repository.UserRepository;
@@ -28,6 +32,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtils jwtUtils;
+    private final RefreshTokenService refreshTokenService;
 
     @Transactional
     public User register(RegisterRequest request) {
@@ -51,6 +56,7 @@ public class AuthService {
         return userRepository.save(user);
     }
 
+    @Transactional
     public JwtResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
@@ -62,8 +68,12 @@ public class AuthService {
         User user = userRepository.findById(userDetails.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
 
+        // Tạo Refresh Token
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
+
         return JwtResponse.builder()
                 .token(jwt)
+                .refreshToken(refreshToken.getToken())
                 .id(user.getId())
                 .fullName(user.getFullName())
                 .email(user.getEmail())
@@ -71,6 +81,51 @@ public class AuthService {
                 .role(user.getRole().name())
                 .avatarUrl(user.getAvatarUrl())
                 .build();
+    }
+
+    @Transactional
+    public TokenRefreshResponse refreshToken(RefreshTokenRequest request) {
+        String requestRefreshToken = request.getRefreshToken();
+
+        return refreshTokenService.findByToken(requestRefreshToken)
+                .map(refreshTokenService::verifyExpiration)
+                .map(RefreshToken::getUser)
+                .map(user -> {
+                    String newAccessToken = jwtUtils.generateTokenFromUser(user);
+                    return TokenRefreshResponse.builder()
+                            .accessToken(newAccessToken)
+                            .refreshToken(requestRefreshToken)
+                            .build();
+                })
+                .orElseThrow(() -> new BadRequestException("Refresh token không tồn tại trong hệ thống!"));
+    }
+
+    @Transactional
+    public User updateProfile(Long userId, UpdateProfileRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
+
+        if (request.getPhone() != null && !request.getPhone().equals(user.getPhone())) {
+            if (userRepository.existsByPhone(request.getPhone())) {
+                throw new BadRequestException("Số điện thoại mới đã được sử dụng bởi tài khoản khác!");
+            }
+            user.setPhone(request.getPhone());
+        }
+
+        if (request.getFullName() != null && !request.getFullName().trim().isEmpty()) {
+            user.setFullName(request.getFullName().trim());
+        }
+        if (request.getAvatarUrl() != null) {
+            user.setAvatarUrl(request.getAvatarUrl());
+        }
+        if (request.getCccdNumber() != null) {
+            user.setCccdNumber(request.getCccdNumber());
+        }
+        if (request.getDriverLicense() != null) {
+            user.setDriverLicense(request.getDriverLicense());
+        }
+
+        return userRepository.save(user);
     }
 
     @Transactional
@@ -92,4 +147,3 @@ public class AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng hiện tại"));
     }
 }
-

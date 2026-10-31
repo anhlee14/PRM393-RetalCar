@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class JwtResponse {
     private String token;
+    private String refreshToken;
     @Builder.Default
     private String type = "Bearer";
     private Long id;
@@ -20,4 +21,3 @@ public class JwtResponse {
     private String role;
     private String avatarUrl;
 }
-

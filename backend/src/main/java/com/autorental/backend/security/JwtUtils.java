@@ -38,6 +38,17 @@ public class JwtUtils {
                 .compact();
     }
 
+    public String generateTokenFromUser(com.autorental.backend.model.User user) {
+        return Jwts.builder()
+                .setSubject(user.getEmail())
+                .claim("userId", user.getId())
+                .claim("fullName", user.getFullName())
+                .setIssuedAt(new Date())
+                .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
+                .signWith(key(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
     public String getUserNameFromJwtToken(String token) {
         return Jwts.parserBuilder().setSigningKey(key()).build()
                 .parseClaimsJws(token).getBody().getSubject();
