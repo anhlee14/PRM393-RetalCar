@@ -1,0 +1,424 @@
+{
+  "info": {
+    "name": "AutoRental API Collection (PRM393) - Có Chú Thích Chi Tiết",
+    "description": "# HƯỚNG DẪN KIỂM THỬ TOÀN DIỆN BACKEND AUTO RENTAL\n\nBộ sưu tập này chứa đầy đủ các API phục vụ 4 yêu cầu đặc thù của dự án và môn học PRM393.\n\n### Cách sử dụng:\n1. Chạy Backend bằng lệnh: `mvn spring-boot:run` tại thư mục `backend/`.\n2. Chạy request **1. Login - Owner** để tự động lưu token chủ xe.\n3. Chạy request **2. Login - Renter** để tự động lưu token khách thuê.\n4. Sau đó bạn có thể bấm **Send** bất kỳ API nào tiếp theo mà không cần copy paste token thủ công!",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "token_owner",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "token_renter",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Xác thực & Tài khoản (Auth)",
+      "description": "Các API quản lý Đăng nhập, Đăng ký và Chuyển đổi vai trò Khách/Chủ xe.",
+      "item": [
+        {
+          "name": "1.1 Login - Chủ xe (Owner)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set('token_owner', jsonData.data.token);",
+                  "    console.log('Đã tự động lưu token_owner thành công!');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"owner@gmail.com\",\n  \"password\": \"123456\"\n}"
+            },
+            "url": "{{base_url}}/api/auth/login",
+            "description": "**Mục đích:** Đăng nhập tài khoản Chủ xe (owner@gmail.com).\n\n**Tự động:** Script test sẽ tự động lưu `token` vào biến `{{token_owner}}` để dùng cho các API quản lý xe, duyệt đơn và check GPS."
+          }
+        },
+        {
+          "name": "1.2 Login - Khách thuê (Renter)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set('token_renter', jsonData.data.token);",
+                  "    console.log('Đã tự động lưu token_renter thành công!');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"renter@gmail.com\",\n  \"password\": \"123456\"\n}"
+            },
+            "url": "{{base_url}}/api/auth/login",
+            "description": "**Mục đích:** Đăng nhập tài khoản Khách thuê (renter@gmail.com).\n\n**Tự động:** Script test tự lưu `token` vào biến `{{token_renter}}` để dùng cho các API đặt xe, ping GPS và xem lộ trình."
+          }
+        },
+        {
+          "name": "1.3 Đăng ký tài khoản mới",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Trần Văn Mới\",\n  \"email\": \"newuser@gmail.com\",\n  \"phone\": \"0912345678\",\n  \"password\": \"123456\",\n  \"role\": \"ROLE_RENTER\",\n  \"cccdNumber\": \"012345678901\",\n  \"driverLicense\": \"B2-554433\"\n}"
+            },
+            "url": "{{base_url}}/api/auth/register",
+            "description": "**Mục đích:** Đăng ký người dùng mới. Lưu trữ CCCD và Giấy phép lái xe (GPLX)."
+          }
+        },
+        {
+          "name": "1.4 Xem thông tin tài khoản hiện tại",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+            ],
+            "url": "{{base_url}}/api/auth/me",
+            "description": "**Mục đích:** Lấy thông tin cá nhân của người đang đăng nhập hiển thị lên màn hình Profile."
+          }
+        },
+        {
+          "name": "1.5 Chuyển đổi vai trò (Switch Mode)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target_role\": \"ROLE_BOTH\"\n}"
+            },
+            "url": "{{base_url}}/api/auth/switch-role",
+            "description": "**Mục đích:** Chuyển đổi qua lại giữa vai trò Khách thuê (ROLE_RENTER) và Chủ xe (ROLE_OWNER)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Quản lý Xe & Thuật toán Matching",
+      "description": "Các API quản lý danh mục xe của chủ xe và thuật toán tính điểm Matching % của khách thuê.",
+      "item": [
+        {
+          "name": "2.1 Lấy tất cả xe sẵn sàng (Public)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/vehicles",
+            "description": "**Mục đích:** Khách thuê duyệt danh sách tất cả các xe đang có trạng thái AVAILABLE."
+          }
+        },
+        {
+          "name": "2.2 Chủ xe đăng xe mới (Cấu hình cờ Có Tài Xế)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token_owner}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Hyundai Tucson 2023\",\n  \"brand\": \"Hyundai\",\n  \"model_year\": 2023,\n  \"license_plate\": \"30G-123.45\",\n  \"vehicle_type\": \"SUV\",\n  \"transmission\": \"AUTO\",\n  \"fuel_type\": \"PETROL\",\n  \"base_price_per_day\": 900000,\n  \"has_driver_option\": true,\n  \"driver_fee_per_day\": 400000,\n  \"seats\": 5,\n  \"description\": \"Xe SUV gia đình đời mới, có sẵn tài xế phục vụ\",\n  \"address\": \"Hà Đông, Hà Nội\",\n  \"current_lat\": 20.9700,\n  \"current_lng\": 105.7700,\n  \"thumbnail_url\": \"https://images.unsplash.com/photo-1549399542-7e3f8b79c341\"\n}"
+            },
+            "url": "{{base_url}}/api/vehicles",
+            "description": "**Nghiệp vụ 1 (With Driver):** Chủ xe cấu hình:\n- `has_driver_option`: `true` (cho phép thuê kèm lái xe)\n- `driver_fee_per_day`: `400000` (giá thuê tài xế 400k/ngày)"
+          }
+        },
+        {
+          "name": "2.3 Chủ xe lấy danh sách xe của mình",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token_owner}}"}
+            ],
+            "url": "{{base_url}}/api/vehicles/owner",
+            "description": "**Mục đích:** Màn hình quản lý xe của Chủ xe hiển thị danh sách xe của mình và tình trạng (AVAILABLE, RENTED, MAINTENANCE)."
+          }
+        },
+        {
+          "name": "2.4 Thuật toán Matching (Tính % độ khớp)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"budget\": 1300000,\n  \"need_driver\": true,\n  \"user_lat\": 21.0131,\n  \"user_lng\": 105.5255,\n  \"vehicle_type\": \"SUV\",\n  \"budget_weight\": 0.25,\n  \"distance_weight\": 0.20,\n  \"driver_weight\": 0.30,\n  \"type_weight\": 0.15,\n  \"rating_weight\": 0.10\n}"
+            },
+            "url": "{{base_url}}/api/vehicles/match",
+            "description": "**Nghiệp vụ 4 (Matching Algorithm):**\n- Tính điểm phần trăm (0 - 100%) dựa trên công thức Haversine (khoảng cách toạ độ km), độ lệch ngân sách, yêu cầu tài xế và loại xe.\n- Kết quả trả về `match_score` và `match_label` (ví dụ: 'Rất phù hợp (95.4%)')."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Đặt xe & Chuyến đi (Bookings)",
+      "description": "Các API tạo đơn đặt xe, tính tiền tự động có tài xế, duyệt đơn và bắt đầu chuyến.",
+      "item": [
+        {
+          "name": "3.1 Khách đặt xe (Tùy chọn Có Tài Xế)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicle_id\": 1,\n  \"start_date\": \"2026-11-05T08:00:00\",\n  \"end_date\": \"2026-11-07T08:00:00\",\n  \"with_driver\": true,\n  \"pickup_address\": \"Khu CNC Hòa Lạc\",\n  \"return_address\": \"Khu CNC Hòa Lạc\"\n}"
+            },
+            "url": "{{base_url}}/api/bookings",
+            "description": "**Nghiệp vụ 1 (Booking with Driver):**\n- Khách chọn `with_driver: true`.\n- Backend tự động tính: Tổng tiền = (Giá xe 1.200k + Phí tài xế 450k) x 2 ngày = 3.300.000 đ.\n- Tự tính tiền cọc 30% = 990.000 đ.\n- Tự động tạo thông báo gửi cho Chủ xe."
+          }
+        },
+        {
+          "name": "3.2 Chủ xe duyệt đơn thuê xe",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token_owner}}"}
+            ],
+            "url": "{{base_url}}/api/bookings/1/confirm",
+            "description": "**Mục đích:** Chủ xe xác nhận duyệt đơn. Xe chuyển sang trạng thái RENTED, đơn chuyển sang CONFIRMED."
+          }
+        },
+        {
+          "name": "3.3 Bắt đầu chuyến đi (Start Trip)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token_owner}}"}
+            ],
+            "url": "{{base_url}}/api/bookings/1/start",
+            "description": "**Mục đích:** Khách nhận xe, chuyến đi chuyển sang ONGOING và bắt đầu kích hoạt đồng hồ giám sát GPS."
+          }
+        },
+        {
+          "name": "3.4 Khách xem danh sách đơn thuê của mình",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+            ],
+            "url": "{{base_url}}/api/bookings/renter",
+            "description": "**Mục đích:** Lịch sử các đơn thuê xe của khách thuê (PENDING, CONFIRMED, ONGOING, COMPLETED)."
+          }
+        },
+        {
+          "name": "3.5 Hoàn thành chuyến xe (Complete Trip)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token_owner}}"}
+            ],
+            "url": "{{base_url}}/api/bookings/1/complete",
+            "description": "**Mục đích:** Kết thúc chuyến xe sau khi bàn giao đối chiếu ảnh xong. Xe tự động chuyển về AVAILABLE để đón khách tiếp theo."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Thanh toán & Hóa đơn (Payments)",
+      "description": "Các API thanh toán tiền đặt cọc 30% và thanh toán hóa đơn chuyến xe.",
+      "item": [
+        {
+          "name": "4.1 Thanh toán đặt cọc 30% (Checkout)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"booking_id\": 1,\n  \"amount\": 990000,\n  \"payment_type\": \"DEPOSIT\",\n  \"payment_method\": \"BANK_TRANSFER_QR\"\n}"
+            },
+            "url": "{{base_url}}/api/payments/checkout",
+            "description": "**Mục đích:** Khách thuê thanh toán tiền cọc 30% cho đơn thuê xe qua mã VietQR hoặc tiền mặt."
+          }
+        },
+        {
+          "name": "4.2 Xem lịch sử thanh toán của đơn thuê",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+            ],
+            "url": "{{base_url}}/api/payments/booking/1",
+            "description": "**Mục đích:** Lấy danh sách các giao dịch thanh toán đã thực hiện cho đơn thuê xe này."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Thẩm định Tình trạng xe Before/After",
+      "description": "Các API chụp 6 góc ảnh nhận xe (Check-in), trả xe (Check-out) và màn hình đối chiếu Before-After.",
+      "item": [
+        {
+          "name": "4.1 Chụp ảnh biên bản lúc nhận xe (CHECK_IN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token_owner}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"booking_id\": 1,\n  \"stage\": \"CHECK_IN\",\n  \"front_img\": \"http://localhost:8080/uploads/inspections/front_in.jpg\",\n  \"rear_img\": \"http://localhost:8080/uploads/inspections/rear_in.jpg\",\n  \"left_img\": \"http://localhost:8080/uploads/inspections/left_in.jpg\",\n  \"right_img\": \"http://localhost:8080/uploads/inspections/right_in.jpg\",\n  \"odo_img\": \"http://localhost:8080/uploads/inspections/odo_in.jpg\",\n  \"fuel_img\": \"http://localhost:8080/uploads/inspections/fuel_in.jpg\",\n  \"odo_km\": 15000.0,\n  \"fuel_level_percent\": 100.0,\n  \"notes\": \"Xe sạch sẽ, không trầy xước, giao đủ 2 chìa khóa\"\n}"
+            },
+            "url": "{{base_url}}/api/inspections",
+            "description": "**Nghiệp vụ 3 (Check-in):** Lưu 6 góc ảnh ban đầu, số km ODO ban đầu (15000 km) và mức xăng 100% lúc giao xe."
+          }
+        },
+        {
+          "name": "4.2 Chụp ảnh biên bản lúc hoàn trả (CHECK_OUT)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"booking_id\": 1,\n  \"stage\": \"CHECK_OUT\",\n  \"front_img\": \"http://localhost:8080/uploads/inspections/front_out.jpg\",\n  \"rear_img\": \"http://localhost:8080/uploads/inspections/rear_out.jpg\",\n  \"left_img\": \"http://localhost:8080/uploads/inspections/left_out.jpg\",\n  \"right_img\": \"http://localhost:8080/uploads/inspections/right_out.jpg\",\n  \"odo_img\": \"http://localhost:8080/uploads/inspections/odo_out.jpg\",\n  \"fuel_img\": \"http://localhost:8080/uploads/inspections/fuel_out.jpg\",\n  \"odo_km\": 15280.5,\n  \"fuel_level_percent\": 85.0,\n  \"notes\": \"Đã đi 280.5 km, xe nguyên vẹn hoàn trả\"\n}"
+            },
+            "url": "{{base_url}}/api/inspections",
+            "description": "**Nghiệp vụ 3 (Check-out):** Lưu ảnh chụp mới lúc trả xe, số ODO lúc trả (15280.5 km) và mức xăng còn lại."
+          }
+        },
+        {
+          "name": "4.3 Đối chiếu ảnh Trước & Sau (Before - After)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token_owner}}"}
+            ],
+            "url": "{{base_url}}/api/inspections/1/comparison",
+            "description": "**Nghiệp vụ 3 (Comparison View):**\n- Trả về song song ảnh CHECK_IN và CHECK_OUT để mobile hiển thị so sánh.\n- Tự tính chênh lệch ODO (280.5 km) và chênh lệch xăng (-15%)."
+          }
+        },
+        {
+          "name": "4.4 Xác nhận hoàn tất biên bản thẩm định",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token_owner}}"}
+            ],
+            "url": "{{base_url}}/api/inspections/1/confirm",
+            "description": "**Mục đích:** Chủ xe hoặc Khách bấm xác nhận đồng ý không có tranh chấp xước xát để hoàn trả cọc."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Giám sát GPS & Quyền riêng tư",
+      "description": "Các API tuân thủ quy định: Khách xem full lộ trình, Chủ xe chỉ xem 1 điểm và bị giới hạn 20 lần/ngày, cảnh báo 1 tiếng.",
+      "item": [
+        {
+          "name": "5.1 Khách gửi toạ độ GPS (GPS Ping)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"booking_id\": 1,\n  \"latitude\": 21.0135,\n  \"longitude\": 105.5260,\n  \"speed\": 45.0\n}"
+            },
+            "url": "{{base_url}}/api/gps/ping",
+            "description": "**Nghiệp vụ 2 (GPS Ping):** Khách gửi vị trí hiện tại. Bắt buộc tối đa 1 tiếng phải gửi 1 lần để không bị phạt vi phạm hợp đồng."
+          }
+        },
+        {
+          "name": "5.2 Khách xem FULL lộ trình di chuyển (Polyline)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+            ],
+            "url": "{{base_url}}/api/gps/renter-route/1",
+            "description": "**Nghiệp vụ 2 (Full Route):** Khách thuê được xem toàn bộ danh sách toạ độ xe đã đi qua để vẽ đường đi trên bản đồ."
+          }
+        },
+        {
+          "name": "5.3 Chủ xe xem vị trí tức thời (Bảo vệ riêng tư & Quota 20 lần)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token_owner}}"}
+            ],
+            "url": "{{base_url}}/api/gps/owner-snapshot/1",
+            "description": "**Nghiệp vụ 2 (Owner Snapshot & Privacy):**\n- Chủ xe KHÔNG được xem toàn bộ lộ trình di chuyển của khách.\n- Chỉ xem 1 điểm toạ độ mới nhất.\n- Tối đa 20 lần / ngày. Trường `remaining_checks_today` đếm lùi: 19, 18... Nếu check quá 20 lần -> HTTP 429 Too Many Requests."
+          }
+        },
+        {
+          "name": "5.4 Kiểm tra cảnh báo quá 1 tiếng không bật GPS",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+            ],
+            "url": "{{base_url}}/api/gps/status/1",
+            "description": "**Nghiệp vụ 2 (GPS 1-Hour Status):** Kiểm tra xem đã quá 60 phút kể từ lần ping cuối chưa. Nếu quá -> `is_overdue: true` cảnh báo."
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Hệ thống Thông báo (Notifications)",
+      "description": "Các API nhận thông báo cập nhật đơn, cảnh báo GPS vi phạm 1 tiếng.",
+      "item": [
+        {
+          "name": "6.1 Lấy danh sách thông báo của tôi",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+            ],
+            "url": "{{base_url}}/api/notifications",
+            "description": "**Mục đích:** Lấy danh sách thông báo (cảnh báo GPS, thông báo duyệt đơn thuê...)."
+          }
+        },
+        {
+          "name": "6.2 Đếm số lượng thông báo chưa đọc",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token_renter}}"}
+            ],
+            "url": "{{base_url}}/api/notifications/unread-count",
+            "description": "**Mục đích:** Hiển thị badge số lượng thông báo đỏ trên biểu tượng quả chuông của App."
+          }
+        }
+      ]
+    }
+  ]
+}
