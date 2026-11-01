@@ -48,6 +48,7 @@ public class PaymentService {
         return saved;
     }
 
+    @Transactional(readOnly = true)
     public List<Payment> getPaymentsByBooking(Long bookingId) {
         return paymentRepository.findByBookingId(bookingId);
     }
