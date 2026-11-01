@@ -34,19 +34,19 @@ class InspectionModel {
   factory InspectionModel.fromJson(Map<String, dynamic> json) {
     return InspectionModel(
       id: json['id'] ?? 0,
-      bookingId: json['booking_id'] ?? (json['booking'] != null ? json['booking']['id'] : 0),
+      bookingId: json['booking_id'] ?? json['bookingId'] ?? (json['booking'] != null ? json['booking']['id'] : 0),
       stage: json['stage'] ?? 'CHECK_IN',
-      frontImg: json['front_img'],
-      rearImg: json['rear_img'],
-      leftImg: json['left_img'],
-      rightImg: json['right_img'],
-      odoImg: json['odo_img'],
-      fuelImg: json['fuel_img'],
-      odoKm: (json['odo_km'] as num?)?.toDouble(),
-      fuelLevelPercent: (json['fuel_level_percent'] as num?)?.toDouble(),
+      frontImg: json['front_img'] ?? json['frontImg'],
+      rearImg: json['rear_img'] ?? json['rearImg'],
+      leftImg: json['left_img'] ?? json['leftImg'],
+      rightImg: json['right_img'] ?? json['rightImg'],
+      odoImg: json['odo_img'] ?? json['odoImg'],
+      fuelImg: json['fuel_img'] ?? json['fuelImg'],
+      odoKm: (json['odo_km'] ?? json['odoKm'] as num?)?.toDouble(),
+      fuelLevelPercent: (json['fuel_level_percent'] ?? json['fuelLevelPercent'] as num?)?.toDouble(),
       notes: json['notes'],
-      isConfirmedByRenter: json['is_confirmed_by_renter'] ?? false,
-      isConfirmedByOwner: json['is_confirmed_by_owner'] ?? false,
+      isConfirmedByRenter: json['is_confirmed_by_renter'] ?? json['isConfirmedByRenter'] ?? false,
+      isConfirmedByOwner: json['is_confirmed_by_owner'] ?? json['isConfirmedByOwner'] ?? false,
     );
   }
 }
@@ -74,15 +74,18 @@ class InspectionComparisonModel {
 
   factory InspectionComparisonModel.fromJson(Map<String, dynamic> json) {
     return InspectionComparisonModel(
-      bookingId: json['booking_id'] ?? 0,
-      vehicleName: json['vehicle_name'] ?? '',
-      licensePlate: json['license_plate'] ?? '',
-      checkIn: json['check_in'] != null ? InspectionModel.fromJson(json['check_in']) : null,
-      checkOut: json['check_out'] != null ? InspectionModel.fromJson(json['check_out']) : null,
-      odoDifferenceKm: (json['odo_difference_km'] as num?)?.toDouble() ?? 0.0,
-      fuelDifferencePercent: (json['fuel_difference_percent'] as num?)?.toDouble() ?? 0.0,
-      isFullyConfirmed: json['is_fully_confirmed'] ?? false,
+      bookingId: json['booking_id'] ?? json['bookingId'] ?? 0,
+      vehicleName: json['vehicle_name'] ?? json['vehicleName'] ?? '',
+      licensePlate: json['license_plate'] ?? json['licensePlate'] ?? '',
+      checkIn: json['check_in'] != null
+          ? InspectionModel.fromJson(json['check_in'])
+          : (json['checkIn'] != null ? InspectionModel.fromJson(json['checkIn']) : null),
+      checkOut: json['check_out'] != null
+          ? InspectionModel.fromJson(json['check_out'])
+          : (json['checkOut'] != null ? InspectionModel.fromJson(json['checkOut']) : null),
+      odoDifferenceKm: (json['odo_difference_km'] ?? json['odoDifferenceKm'] as num?)?.toDouble() ?? 0.0,
+      fuelDifferencePercent: (json['fuel_difference_percent'] ?? json['fuelDifferencePercent'] as num?)?.toDouble() ?? 0.0,
+      isFullyConfirmed: json['is_fully_confirmed'] ?? json['isFullyConfirmed'] ?? false,
     );
   }
 }
-
