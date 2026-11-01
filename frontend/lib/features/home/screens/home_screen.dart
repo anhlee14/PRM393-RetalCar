@@ -6,6 +6,9 @@ import '../../../data/services/auth_service.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../auth/screens/profile_screen.dart';
 import '../../vehicle_management/screens/owner_vehicle_list_screen.dart';
+import '../../matching_explore/screens/explore_screen.dart';
+import '../../booking/screens/booking_history_screen.dart';
+import '../../gps_tracking/screens/notifications_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -483,96 +486,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildVehicleExploreStub() {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Danh Sách Xe Cho Thuê')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withAlpha(25),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.directions_car_filled, size: 64, color: AppColors.primary),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Khám Phá & Đặt Thuê Xe',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Phân hệ Khám phá, Tìm kiếm & Gợi ý xe (Matching) do Thành viên 4 phụ trách.\nĐang kết nối API danh sách xe.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-              ),
-              const SizedBox(height: 24),
-              OutlinedButton.icon(
-                onPressed: () => setState(() => _currentNavIndex = 0),
-                icon: const Icon(Icons.arrow_back),
-                label: const Text('Quay lại Trang chủ'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMyBookingsStub() {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Xe Đã Thuê Của Tôi')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.deepPurple.shade50,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.receipt_long_rounded, size: 64, color: Colors.deepPurple),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Lịch Sử Chuyến Đi & Đơn Thuê',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Phân hệ Quản lý đơn thuê xe, duyệt đơn & thanh toán tiền cọc do Thành viên 2 phụ trách.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-              ),
-              const SizedBox(height: 24),
-              OutlinedButton.icon(
-                onPressed: () => setState(() => _currentNavIndex = 0),
-                icon: const Icon(Icons.arrow_back),
-                label: const Text('Quay lại Trang chủ'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildSelectedBody() {
     switch (_currentNavIndex) {
       case 0:
         return _buildHomeContent();
       case 1:
-        return _buildVehicleExploreStub();
+        return const ExploreScreen();
       case 2:
-        return _buildMyBookingsStub();
+        return const BookingHistoryScreen();
       case 3:
       default:
         return const ProfileScreen();
@@ -589,8 +510,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 IconButton(
                   icon: const Icon(Icons.notifications_outlined),
                   onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Tính năng Thông báo do Thành viên 3 phụ trách.')),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const NotificationsScreen()),
                     );
                   },
                 ),
