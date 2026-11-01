@@ -12,8 +12,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _emailController = TextEditingController(text: 'renter@gmail.com');
+  final _passwordController = TextEditingController(text: '123456');
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -39,33 +39,38 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     setState(() => _isLoading = true);
-    final result = await AuthService.login(username, password);
-    if (!mounted) return;
-    setState(() => _isLoading = false);
+    try {
+      final result = await AuthService.login(username, password);
+      if (!mounted) return;
 
-    if (result['success'] == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đăng nhập thành công!'),
-          backgroundColor: AppColors.success,
-        ),
-      );
+      if (result['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đăng nhập thành công!'),
+            backgroundColor: AppColors.success,
+          ),
+        );
 
-      if (Navigator.canPop(context)) {
-        Navigator.pop(context, true);
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context, true);
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (ctx) => const HomeScreen()),
+          );
+        }
       } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (ctx) => const HomeScreen()),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Lỗi đăng nhập'),
+            backgroundColor: AppColors.danger,
+          ),
         );
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message'] ?? 'Lỗi đăng nhập'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -150,7 +155,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Chuyển sang màn hình Đăng ký
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -166,6 +170,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+              Text(
+                'Gợi ý test: renter@gmail.com / 123456 hoặc owner@gmail.com / 123456',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              )
             ],
           ),
         ),

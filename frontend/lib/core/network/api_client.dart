@@ -44,9 +44,11 @@ class ApiClient {
     return headers;
   }
 
+  static const Duration _timeout = Duration(seconds: 10);
+
   static Future<http.Response> get(String url) async {
     final headers = await _getHeaders();
-    return await http.get(Uri.parse(url), headers: headers);
+    return await http.get(Uri.parse(url), headers: headers).timeout(_timeout);
   }
 
   static Future<http.Response> post(String url, {Map<String, dynamic>? body}) async {
@@ -55,7 +57,7 @@ class ApiClient {
       Uri.parse(url),
       headers: headers,
       body: body != null ? jsonEncode(body) : null,
-    );
+    ).timeout(_timeout);
   }
 
   static Future<http.Response> put(String url, {Map<String, dynamic>? body}) async {
@@ -64,11 +66,11 @@ class ApiClient {
       Uri.parse(url),
       headers: headers,
       body: body != null ? jsonEncode(body) : null,
-    );
+    ).timeout(_timeout);
   }
 
   static Future<http.Response> delete(String url) async {
     final headers = await _getHeaders();
-    return await http.delete(Uri.parse(url), headers: headers);
+    return await http.delete(Uri.parse(url), headers: headers).timeout(_timeout);
   }
 }

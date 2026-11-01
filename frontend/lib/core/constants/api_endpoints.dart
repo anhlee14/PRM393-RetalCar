@@ -2,10 +2,21 @@ import 'package:flutter/foundation.dart';
 
 class ApiEndpoints {
   // Tự động nhận diện nền tảng:
-  // - Nếu chạy trên Web (Chrome) hoặc Windows: dùng 'http://localhost:8080'
-  // - Nếu chạy trên Android Emulator: dùng 'http://10.0.2.2:8080'
-  // - Nếu cắm điện thoại thật qua USB/LAN: thay bằng IP LAN máy tính (VD: 'http://192.168.1.10:8080')
-  static String get baseUrl => kIsWeb ? 'http://localhost:8080' : 'http://10.0.2.2:8080';
+  // - Web (Chrome, Edge): 'http://localhost:8080'
+  // - Android Emulator: 'http://10.0.2.2:8080'
+  // - iOS Simulator / Desktop (Windows, macOS): 'http://localhost:8080'
+  // - Thiết bị thật: thay bằng IP LAN máy chủ
+  static String get baseUrl {
+    if (kIsWeb) {
+      return 'http://localhost:8080';
+    }
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return 'http://10.0.2.2:8080';
+      default:
+        return 'http://localhost:8080';
+    }
+  }
 
   // Auth & Profile
   static String get login => '$baseUrl/api/auth/login';

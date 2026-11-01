@@ -21,7 +21,7 @@ class AuthService {
         return {'success': false, 'message': data['message'] ?? 'Đăng nhập thất bại'};
       }
     } catch (e) {
-      return {'success': false, 'message': 'Lỗi kết nối máy chủ: $e'};
+      return {'success': false, 'message': 'Không thể kết nối đến máy chủ Backend ($e). Hãy đảm bảo Backend đang chạy!'};
     }
   }
 
