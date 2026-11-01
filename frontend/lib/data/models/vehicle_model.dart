@@ -72,3 +72,31 @@ class VehicleModel {
   }
 }
 
+class VehicleMatchModel {
+  final VehicleModel vehicle;
+  final double matchScore;
+  final double? distanceKm;
+  final String matchLabel;
+  final Map<String, dynamic>? breakdownScores;
+
+  VehicleMatchModel({
+    required this.vehicle,
+    required this.matchScore,
+    this.distanceKm,
+    required this.matchLabel,
+    this.breakdownScores,
+  });
+
+  factory VehicleMatchModel.fromJson(Map<String, dynamic> json) {
+    return VehicleMatchModel(
+      vehicle: VehicleModel.fromJson(json['vehicle'] is Map<String, dynamic> ? json['vehicle'] : json),
+      matchScore: (json['match_score'] as num?)?.toDouble() ?? 0.0,
+      distanceKm: (json['distance_km'] as num?)?.toDouble(),
+      matchLabel: json['match_label'] ?? '',
+      breakdownScores: json['breakdown_scores'] != null
+          ? Map<String, dynamic>.from(json['breakdown_scores'])
+          : null,
+    );
+  }
+}
+

@@ -73,7 +73,7 @@ public class DataSeeder implements CommandLineRunner {
                     .averageRating(4.9)
                     .totalReviews(28)
                     .status(VehicleStatus.AVAILABLE)
-                    .thumbnailUrl("https://images.unsplash.com/photo-1549399542-7e3f8b79c341")
+                    .thumbnailUrl("https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/2022_Vinfast_VF8_front_view.jpg/1280px-2022_Vinfast_VF8_front_view.jpg")
                     .build();
 
             Vehicle v2 = Vehicle.builder()
@@ -97,7 +97,7 @@ public class DataSeeder implements CommandLineRunner {
                     .averageRating(4.8)
                     .totalReviews(45)
                     .status(VehicleStatus.AVAILABLE)
-                    .thumbnailUrl("https://images.unsplash.com/photo-1580273916550-e323be2ae537")
+                    .thumbnailUrl("https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Toyota_Vios_1.5_G_2019_%282%29.jpg/1280px-Toyota_Vios_1.5_G_2019_%282%29.jpg")
                     .build();
 
             Vehicle v3 = Vehicle.builder()
@@ -121,7 +121,7 @@ public class DataSeeder implements CommandLineRunner {
                     .averageRating(4.7)
                     .totalReviews(19)
                     .status(VehicleStatus.AVAILABLE)
-                    .thumbnailUrl("https://images.unsplash.com/photo-1533473359331-0135ef1b58bf")
+                    .thumbnailUrl("https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/Mitsubishi_Xpander_Sport_%28depan%29%2C_Palangkaraya.jpg/1280px-Mitsubishi_Xpander_Sport_%28depan%29%2C_Palangkaraya.jpg")
                     .build();
 
             vehicleRepository.saveAll(List.of(v1, v2, v3));

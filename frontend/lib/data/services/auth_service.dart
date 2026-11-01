@@ -5,18 +5,22 @@ import '../models/user_model.dart';
 
 class AuthService {
   static Future<Map<String, dynamic>> login(String username, String password) async {
-    final response = await ApiClient.post(
-      ApiEndpoints.login,
-      body: {'username': username, 'password': password},
-    );
+    try {
+      final response = await ApiClient.post(
+        ApiEndpoints.login,
+        body: {'username': username, 'password': password},
+      );
 
-    final data = jsonDecode(utf8.decode(response.bodyBytes));
-    if (response.statusCode == 200 && data['success'] == true) {
-      final token = data['data']['token'];
-      await ApiClient.saveToken(token);
-      return {'success': true, 'data': data['data']};
-    } else {
-      return {'success': false, 'message': data['message'] ?? 'Đăng nhập thất bại'};
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (response.statusCode == 200 && data['success'] == true) {
+        final token = data['data']['token'];
+        await ApiClient.saveToken(token);
+        return {'success': true, 'data': data['data']};
+      } else {
+        return {'success': false, 'message': data['message'] ?? 'Đăng nhập thất bại'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Không thể kết nối đến máy chủ Backend ($e). Hãy đảm bảo Backend đang chạy!'};
     }
   }
 
