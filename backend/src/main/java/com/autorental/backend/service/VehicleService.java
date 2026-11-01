@@ -127,14 +127,17 @@ public class VehicleService {
         vehicleRepository.delete(vehicle);
     }
 
+    @Transactional(readOnly = true)
     public List<Vehicle> getOwnerVehicles(Long ownerId) {
         return vehicleRepository.findByOwnerId(ownerId);
     }
 
+    @Transactional(readOnly = true)
     public List<Vehicle> getAllAvailableVehicles() {
         return vehicleRepository.findByStatus(VehicleStatus.AVAILABLE);
     }
 
+    @Transactional(readOnly = true)
     public Vehicle getVehicleById(Long id) {
         return vehicleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy xe với ID: " + id));
