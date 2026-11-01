@@ -62,4 +62,18 @@ public class VehicleController {
         Vehicle vehicle = vehicleService.getVehicleById(id);
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin chi tiết xe thành công", vehicle));
     }
+
+    // Logic: Admin duyệt xe cho thuê
+    @RequestMapping(value = "/{id}/approve", method = {RequestMethod.PATCH, RequestMethod.PUT})
+    public ResponseEntity<ApiResponse<Vehicle>> approveVehicle(@PathVariable Long id) {
+        Vehicle vehicle = vehicleService.updateVehicleStatus(id, com.autorental.backend.model.VehicleStatus.AVAILABLE);
+        return ResponseEntity.ok(ApiResponse.success("Duyệt xe thành công, xe đã sẵn sàng cho thuê", vehicle));
+    }
+
+    // Logic: Admin từ chối duyệt xe
+    @RequestMapping(value = "/{id}/reject", method = {RequestMethod.PATCH, RequestMethod.PUT})
+    public ResponseEntity<ApiResponse<Vehicle>> rejectVehicle(@PathVariable Long id) {
+        Vehicle vehicle = vehicleService.updateVehicleStatus(id, com.autorental.backend.model.VehicleStatus.REJECTED);
+        return ResponseEntity.ok(ApiResponse.success("Đã từ chối duyệt xe", vehicle));
+    }
 }
