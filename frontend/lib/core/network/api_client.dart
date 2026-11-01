@@ -8,6 +8,19 @@ class ApiClient {
     return prefs.getString('jwt_token');
   }
 
+  static Future<String?> getRefreshToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('refresh_token');
+  }
+
+  static Future<void> saveTokens({required String accessToken, String? refreshToken}) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('jwt_token', accessToken);
+    if (refreshToken != null) {
+      await prefs.setString('refresh_token', refreshToken);
+    }
+  }
+
   static Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('jwt_token', token);
@@ -16,6 +29,7 @@ class ApiClient {
   static Future<void> clearToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('jwt_token');
+    await prefs.remove('refresh_token');
   }
 
   static Future<Map<String, String>> _getHeaders() async {
@@ -58,4 +72,3 @@ class ApiClient {
     return await http.delete(Uri.parse(url), headers: headers);
   }
 }
-

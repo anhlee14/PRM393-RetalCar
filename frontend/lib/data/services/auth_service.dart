@@ -5,18 +5,23 @@ import '../models/user_model.dart';
 
 class AuthService {
   static Future<Map<String, dynamic>> login(String username, String password) async {
-    final response = await ApiClient.post(
-      ApiEndpoints.login,
-      body: {'username': username, 'password': password},
-    );
+    try {
+      final response = await ApiClient.post(
+        ApiEndpoints.login,
+        body: {'username': username, 'password': password},
+      );
 
-    final data = jsonDecode(utf8.decode(response.bodyBytes));
-    if (response.statusCode == 200 && data['success'] == true) {
-      final token = data['data']['token'];
-      await ApiClient.saveToken(token);
-      return {'success': true, 'data': data['data']};
-    } else {
-      return {'success': false, 'message': data['message'] ?? 'Đăng nhập thất bại'};
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (response.statusCode == 200 && data['success'] == true) {
+        final token = data['data']['token'];
+        final refreshToken = data['data']['refresh_token'];
+        await ApiClient.saveTokens(accessToken: token, refreshToken: refreshToken);
+        return {'success': true, 'data': data['data']};
+      } else {
+        return {'success': false, 'message': data['message'] ?? 'Đăng nhập thất bại'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối máy chủ: $e'};
     }
   }
 
@@ -29,44 +34,84 @@ class AuthService {
     String? cccd,
     String? driverLicense,
   }) async {
-    final response = await ApiClient.post(
-      ApiEndpoints.register,
-      body: {
-        'full_name': fullName,
-        'email': email,
-        'phone': phone,
-        'password': password,
-        'role': role,
-        'cccd_number': cccd,
-        'driver_license': driverLicense,
-      },
-    );
+    try {
+      final response = await ApiClient.post(
+        ApiEndpoints.register,
+        body: {
+          'full_name': fullName,
+          'email': email,
+          'phone': phone,
+          'password': password,
+          'role': role,
+          'cccd_number': cccd,
+          'driver_license': driverLicense,
+        },
+      );
 
-    final data = jsonDecode(utf8.decode(response.bodyBytes));
-    if (response.statusCode == 200 && data['success'] == true) {
-      return {'success': true, 'data': UserModel.fromJson(data['data'])};
-    } else {
-      return {'success': false, 'message': data['message'] ?? 'Đăng ký thất bại'};
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (response.statusCode == 200 && data['success'] == true) {
+        return {'success': true, 'data': UserModel.fromJson(data['data'])};
+      } else {
+        return {'success': false, 'message': data['message'] ?? 'Đăng ký thất bại'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối máy chủ: $e'};
     }
   }
 
   static Future<UserModel?> getCurrentUser() async {
-    final response = await ApiClient.get(ApiEndpoints.currentUser);
-    if (response.statusCode == 200) {
-      final data = jsonDecode(utf8.decode(response.bodyBytes));
-      if (data['success'] == true && data['data'] != null) {
-        return UserModel.fromJson(data['data']);
+    try {
+      final response = await ApiClient.get(ApiEndpoints.currentUser);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        if (data['success'] == true && data['data'] != null) {
+          return UserModel.fromJson(data['data']);
+        }
       }
-    }
+    } catch (_) {}
     return null;
   }
 
   static Future<bool> switchRole(String targetRole) async {
-    final response = await ApiClient.put(
-      ApiEndpoints.switchRole,
-      body: {'target_role': targetRole},
-    );
-    return response.statusCode == 200;
+    try {
+      final response = await ApiClient.put(
+        ApiEndpoints.switchRole,
+        body: {'target_role': targetRole},
+      );
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateProfile({
+    String? fullName,
+    String? phone,
+    String? avatarUrl,
+    String? cccdNumber,
+    String? driverLicense,
+  }) async {
+    try {
+      final body = <String, dynamic>{};
+      if (fullName != null) body['full_name'] = fullName;
+      if (phone != null) body['phone'] = phone;
+      if (avatarUrl != null) body['avatar_url'] = avatarUrl;
+      if (cccdNumber != null) body['cccd_number'] = cccdNumber;
+      if (driverLicense != null) body['driver_license'] = driverLicense;
+
+      final response = await ApiClient.put(
+        ApiEndpoints.updateProfile,
+        body: body,
+      );
+
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (response.statusCode == 200 && data['success'] == true) {
+        return {'success': true, 'data': UserModel.fromJson(data['data'])};
+      } else {
+        return {'success': false, 'message': data['message'] ?? 'Cập nhật hồ sơ thất bại'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối máy chủ: $e'};
+    }
   }
 }
-

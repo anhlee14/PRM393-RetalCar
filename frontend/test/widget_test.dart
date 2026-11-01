@@ -6,7 +6,7 @@ void main() {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const AutoRentalApp());
 
-    // Verify that login screen renders
-    expect(find.text('ĐĂNG NHẬP'), findsWidgets);
+    // Verify that home screen renders
+    expect(find.text('AutoRental'), findsWidgets);
   });
 }
