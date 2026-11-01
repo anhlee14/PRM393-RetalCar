@@ -3,6 +3,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/vehicle_image_helper.dart';
 import '../../../data/models/vehicle_model.dart';
+import '../../booking/screens/booking_form_screen.dart';
 
 class VehicleDetailScreen extends StatefulWidget {
   final VehicleModel vehicle;
@@ -435,10 +436,10 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                       elevation: 2,
                     ),
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Đang kết nối đơn đặt xe cho ${v.name} (Chức năng Người 2)...'),
-                          backgroundColor: AppColors.primary,
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => BookingFormScreen(vehicle: v),
                         ),
                       );
                     },
