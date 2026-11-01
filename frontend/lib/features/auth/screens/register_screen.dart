@@ -20,7 +20,6 @@ class _RegisterScreenState extends State<RegisterScreen> with ValidationMixin {
   final _cccdController = TextEditingController();
   final _licenseController = TextEditingController();
 
-  String _selectedRole = 'ROLE_RENTER';
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -45,7 +44,6 @@ class _RegisterScreenState extends State<RegisterScreen> with ValidationMixin {
       email: _emailController.text.trim(),
       phone: _phoneController.text.trim(),
       password: _passwordController.text.trim(),
-      role: _selectedRole,
       cccd: _cccdController.text.trim().isEmpty ? null : _cccdController.text.trim(),
       driverLicense: _licenseController.text.trim().isEmpty ? null : _licenseController.text.trim(),
     );
@@ -99,41 +97,6 @@ class _RegisterScreenState extends State<RegisterScreen> with ValidationMixin {
                   style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                 ),
                 const SizedBox(height: 24),
-
-                // Lựa chọn vai trò ban đầu
-                const Text(
-                  'Bạn tham gia với vai trò chính là:',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ChoiceChip(
-                        avatar: const Icon(Icons.person, size: 18),
-                        label: const Text('Khách thuê xe'),
-                        selected: _selectedRole == 'ROLE_RENTER',
-                        onSelected: (selected) {
-                          if (selected) setState(() => _selectedRole = 'ROLE_RENTER');
-                        },
-                        selectedColor: AppColors.primary.withAlpha(50),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ChoiceChip(
-                        avatar: const Icon(Icons.drive_eta, size: 18),
-                        label: const Text('Chủ xe cho thuê'),
-                        selected: _selectedRole == 'ROLE_OWNER',
-                        onSelected: (selected) {
-                          if (selected) setState(() => _selectedRole = 'ROLE_OWNER');
-                        },
-                        selectedColor: AppColors.accent.withAlpha(50),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
 
                 // Họ và tên (Dùng hàm validateName từ ValidationMixin)
                 TextFormField(
