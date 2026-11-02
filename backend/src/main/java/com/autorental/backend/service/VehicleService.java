@@ -42,7 +42,7 @@ public class VehicleService {
                 .address(request.getAddress())
                 .currentLat(request.getCurrentLat())
                 .currentLng(request.getCurrentLng())
-                .status(VehicleStatus.AVAILABLE)
+                .status(VehicleStatus.PENDING_APPROVAL)
                 .thumbnailUrl(request.getThumbnailUrl())
                 .build();
 

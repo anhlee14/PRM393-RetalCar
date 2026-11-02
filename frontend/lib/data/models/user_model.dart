@@ -22,13 +22,13 @@ class UserModel {
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: json['id'] ?? 0,
-      fullName: json['full_name'] ?? '',
+      fullName: json['full_name'] ?? json['fullName'] ?? '',
       email: json['email'] ?? '',
       phone: json['phone'] ?? '',
       role: json['role'] ?? 'ROLE_RENTER',
-      cccdNumber: json['cccd_number'],
-      driverLicense: json['driver_license'],
-      avatarUrl: json['avatar_url'],
+      cccdNumber: json['cccd_number'] ?? json['cccdNumber'],
+      driverLicense: json['driver_license'] ?? json['driverLicense'],
+      avatarUrl: json['avatar_url'] ?? json['avatarUrl'],
     );
   }
 
@@ -45,4 +45,3 @@ class UserModel {
     };
   }
 }
-

@@ -17,16 +17,21 @@ class ApiEndpoints {
     }
   }
 
-  // Auth
+  // Auth & Profile
   static String get login => '$baseUrl/api/auth/login';
   static String get register => '$baseUrl/api/auth/register';
+  static String get refreshToken => '$baseUrl/api/auth/refresh';
   static String get switchRole => '$baseUrl/api/auth/switch-role';
   static String get currentUser => '$baseUrl/api/auth/me';
+  static String get updateProfile => '$baseUrl/api/users/me';
 
   // Vehicles & Matching
   static String get vehicles => '$baseUrl/api/vehicles';
   static String get ownerVehicles => '$baseUrl/api/vehicles/owner';
   static String get matchVehicles => '$baseUrl/api/vehicles/match';
+  static String vehicleDetail(int id) => '$vehicles/$id';
+  static String approveVehicle(int id) => '$vehicles/$id/approve';
+  static String rejectVehicle(int id) => '$vehicles/$id/reject';
 
   // Bookings
   static String get bookings => '$baseUrl/api/bookings';
