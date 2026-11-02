@@ -507,7 +507,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Phân hệ Khám phá, Tìm kiếm & Gợi ý xe (Matching) do Thành viên 4 phụ trách.\nĐang kết nối API danh sách xe.',
+                'Khám phá, Tìm kiếm & Gợi ý xe (Matching) \nĐang kết nối API danh sách xe.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
               ),
@@ -548,7 +548,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Phân hệ Quản lý đơn thuê xe, duyệt đơn & thanh toán tiền cọc do Thành viên 2 phụ trách.',
+                'Quản lý đơn thuê xe, duyệt đơn & thanh toán tiền cọc',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
               ),
@@ -570,12 +570,12 @@ class _HomeScreenState extends State<HomeScreen> {
       case 0:
         return _buildHomeContent();
       case 1:
-        return _buildVehicleExploreStub();
+        return _buildVehicleExploreStub(); // Tab 2: Danh sách xe / Tìm xe
       case 2:
-        return _buildMyBookingsStub();
+        return _buildMyBookingsStub();  // Tab 3: Xe đã thuê / Đơn thuê
       case 3:
       default:
-        return const ProfileScreen();
+        return const ProfileScreen(); // Tab 4: Tài khoản cá nhân
     }
   }
 
@@ -590,7 +590,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: const Icon(Icons.notifications_outlined),
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Tính năng Thông báo do Thành viên 3 phụ trách.')),
+                      const SnackBar(content: Text('Thông báo')),
                     );
                   },
                 ),

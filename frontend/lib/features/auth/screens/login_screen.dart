@@ -156,11 +156,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   const Text('Chưa có tài khoản?'),
                   TextButton(
-                    onPressed: () {
-                      Navigator.push(
+                    onPressed: () async {
+                      final registeredEmail = await Navigator.push<String>(
                         context,
                         MaterialPageRoute(builder: (ctx) => const RegisterScreen()),
                       );
+                      if (registeredEmail != null && mounted) {
+                        setState(() {
+                          _emailController.text = registeredEmail;
+                        });
+                      }
                     },
                     child: const Text('Đăng ký ngay', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),

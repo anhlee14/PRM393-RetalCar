@@ -18,7 +18,11 @@ class AuthService {
         await ApiClient.saveTokens(accessToken: token, refreshToken: refreshToken);
         return {'success': true, 'data': data['data']};
       } else {
-        return {'success': false, 'message': data['message'] ?? 'Đăng nhập thất bại'};
+        String msg = data['message'] ?? 'Đăng nhập thất bại';
+        if (msg.contains('Bad credentials') || msg.contains('Unauthorized')) {
+          msg = 'Tài khoản hoặc mật khẩu không chính xác!';
+        }
+        return {'success': false, 'message': msg};
       }
     } catch (e) {
       return {'success': false, 'message': 'Lỗi kết nối máy chủ: $e'};

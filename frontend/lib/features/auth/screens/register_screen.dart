@@ -17,10 +17,12 @@ class _RegisterScreenState extends State<RegisterScreen> with ValidationMixin {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _cccdController = TextEditingController();
   final _licenseController = TextEditingController();
 
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   bool _isLoading = false;
 
   @override
@@ -29,6 +31,7 @@ class _RegisterScreenState extends State<RegisterScreen> with ValidationMixin {
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _cccdController.dispose();
     _licenseController.dispose();
     super.dispose();
@@ -37,11 +40,22 @@ class _RegisterScreenState extends State<RegisterScreen> with ValidationMixin {
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
 
+    if (_passwordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mật khẩu xác nhận không trùng khớp!'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
+    final email = _emailController.text.trim();
     final res = await AuthService.register(
       fullName: _nameController.text.trim(),
-      email: _emailController.text.trim(),
+      email: email,
       phone: _phoneController.text.trim(),
       password: _passwordController.text.trim(),
       cccd: _cccdController.text.trim().isEmpty ? null : _cccdController.text.trim(),
@@ -58,7 +72,8 @@ class _RegisterScreenState extends State<RegisterScreen> with ValidationMixin {
           backgroundColor: AppColors.success,
         ),
       );
-      Navigator.pop(context);
+      // Trả lại email vừa đăng ký cho màn hình Login tự động điền sẵn
+      Navigator.pop(context, email);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -150,6 +165,31 @@ class _RegisterScreenState extends State<RegisterScreen> with ValidationMixin {
                     ),
                   ),
                   validator: validatePassword,
+                ),
+                const SizedBox(height: 14),
+
+                // Xác nhận lại mật khẩu
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  obscureText: _obscureConfirmPassword,
+                  decoration: InputDecoration(
+                    labelText: 'Xác nhận lại mật khẩu *',
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.lock_reset),
+                    suffixIcon: IconButton(
+                      icon: Icon(_obscureConfirmPassword ? Icons.visibility_off : Icons.visibility),
+                      onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Vui lòng xác nhận lại mật khẩu';
+                    }
+                    if (value.trim() != _passwordController.text.trim()) {
+                      return 'Mật khẩu xác nhận không trùng khớp';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 14),
 
