@@ -26,8 +26,8 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
   String get _vietQrUrl {
     final amount = widget.booking.depositAmount.toInt();
     final addInfo = Uri.encodeComponent('AUTORENTAL BK${widget.booking.id}');
-    final accountName = Uri.encodeComponent('NGUYEN VAN CHU XE');
-    return 'https://img.vietqr.io/image/techcombank-190366889999-compact2.png?amount=$amount&addInfo=$addInfo&accountName=$accountName';
+    final accountName = Uri.encodeComponent('NGUYEN THANH PHONG');
+    return 'https://img.vietqr.io/image/mbbank-69999968888-compact2.png?amount=$amount&addInfo=$addInfo&accountName=$accountName';
   }
 
   void _copyToClipboard(String text, String message) {
@@ -406,10 +406,10 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
           ),
           const SizedBox(height: 12),
 
-          // Phương thức 1: Chuyển khoản QR (VietQR)
+          // Phương thức 1: Chuyển khoản QR (VietQR MB Bank)
           _buildMethodRadio(
             title: 'Chuyển khoản QR (VietQR Ngân hàng)',
-            subtitle: 'Quét mã VietQR tự động điền số tiền và cú pháp',
+            subtitle: 'Quét mã VietQR MB Bank - NGUYEN THANH PHONG (STK: 69999968888)',
             value: 'BANK_TRANSFER_QR',
             icon: Icons.qr_code_scanner_rounded,
           ),
@@ -508,7 +508,7 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
       child: Column(
         children: [
           const Text(
-            'QUÉT MÃ VIETQR ĐỂ CHUYỂN KHOẢN',
+            'QUÉT MÃ VIETQR MB BANK ĐỂ CHUYỂN KHOẢN',
             style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
           ),
           const SizedBox(height: 10),
@@ -530,20 +530,26 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
                   ),
                 );
               },
-              errorBuilder: (ctx, err, stack) => Container(
+              errorBuilder: (ctx, err, stack) => Image.asset(
+                'assets/images/qr_mbbank.jpg',
                 width: 220,
                 height: 220,
-                color: Colors.white,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(Icons.qr_code_2_rounded, size: 80, color: AppColors.primary),
-                    SizedBox(height: 8),
-                    Text(
-                      'Mã QR Chuyển khoản',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                    ),
-                  ],
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: 220,
+                  height: 220,
+                  color: Colors.white,
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.qr_code_2_rounded, size: 80, color: AppColors.primary),
+                      SizedBox(height: 8),
+                      Text(
+                        'MB Bank - NGUYEN THANH PHONG',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -558,11 +564,11 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
             ),
             child: Column(
               children: [
-                _buildBankInfoRow('Ngân hàng:', 'Techcombank'),
+                _buildBankInfoRow('Ngân hàng:', 'MB Bank (Ngân hàng Quân Đội)'),
                 const SizedBox(height: 6),
-                _buildBankInfoRow('Chủ tài khoản:', 'NGUYEN VAN CHU XE'),
+                _buildBankInfoRow('Chủ tài khoản:', 'NGUYEN THANH PHONG'),
                 const SizedBox(height: 6),
-                _buildBankInfoRow('Số tài khoản:', '190366889999', isCopyable: true),
+                _buildBankInfoRow('Số tài khoản:', '69999968888', isCopyable: true),
                 const SizedBox(height: 6),
                 _buildBankInfoRow('Số tiền cọc:', CurrencyFormatter.format(depositInt)),
                 const SizedBox(height: 6),
@@ -580,13 +586,14 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             onPressed: () {
-              _copyToClipboard('190366889999\n$contentSyntax', 'Đã sao chép Số tài khoản và Nội dung chuyển khoản!');
+              _copyToClipboard('69999968888\n$contentSyntax', 'Đã sao chép STK MB Bank và Nội dung chuyển khoản!');
             },
           ),
         ],
       ),
     );
   }
+
 
   Widget _buildBankInfoRow(String label, String value, {bool isCopyable = false}) {
     return Row(
