@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../../core/constants/api_endpoints.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/vehicle_model.dart';
+import '../../../data/services/file_upload_service.dart';
 import '../../../data/services/vehicle_service.dart';
 
 class EditVehicleScreen extends StatefulWidget {
@@ -33,6 +36,9 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
 
   bool _isSaving = false;
   bool _isDeleting = false;
+  bool _isUploadingImage = false;
+  String _uploadStatus = '';
+  final List<String> _imageUrls = [];
 
   final List<String> _brands = [
     'VinFast',
@@ -59,6 +65,9 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
     _addressController = TextEditingController(text: v.address ?? '');
     _descriptionController = TextEditingController(text: v.description ?? '');
     _thumbnailController = TextEditingController(text: v.thumbnailUrl ?? '');
+    if (v.thumbnailUrl != null && v.thumbnailUrl!.isNotEmpty) {
+      _imageUrls.add(v.thumbnailUrl!);
+    }
 
     _selectedBrand = _brands.contains(v.brand) ? v.brand : 'VinFast';
     _selectedType = v.vehicleType;
@@ -120,7 +129,8 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
       modelYear: int.tryParse(_yearController.text.trim()) ?? 2024,
       description: _descriptionController.text.trim(),
       address: _addressController.text.trim(),
-      thumbnailUrl: _thumbnailController.text.trim(),
+      thumbnailUrl: _imageUrls.isNotEmpty ? _imageUrls.first : _thumbnailController.text.trim(),
+      imageUrls: _imageUrls,
     );
 
     if (!mounted) return;
@@ -138,6 +148,107 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(res['message'] ?? 'Cập nhật thất bại'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+    }
+  }
+
+  Future<void> _pickMultiFromGallery() async {
+    final remaining = 6 - _imageUrls.length;
+    if (remaining <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã đạt tối đa 6 ảnh cho mỗi xe!'), backgroundColor: AppColors.warning),
+      );
+      return;
+    }
+
+    setState(() {
+      _isUploadingImage = true;
+      _uploadStatus = 'Đang mở thư viện...';
+    });
+
+    final res = await FileUploadService.pickMultiAndUpload(
+      maxImages: remaining,
+      folder: 'vehicles',
+      onProgress: (current, total) {
+        if (mounted) {
+          setState(() {
+            _uploadStatus = 'Đang tải $current/$total ảnh lên...';
+          });
+        }
+      },
+    );
+
+    if (!mounted) return;
+    final List<String> newUrls = (res['urls'] as List?)?.cast<String>() ?? [];
+
+    setState(() {
+      _isUploadingImage = false;
+      _uploadStatus = '';
+      if (newUrls.isNotEmpty) {
+        _imageUrls.addAll(newUrls);
+        if (_thumbnailController.text.isEmpty && _imageUrls.isNotEmpty) {
+          _thumbnailController.text = _imageUrls.first;
+        }
+      }
+    });
+
+    if (res['success'] == true && newUrls.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['message'] ?? 'Đã tải lên thành công ${newUrls.length} ảnh!'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } else if (res['message'] != 'Đã hủy chọn ảnh') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['message'] ?? 'Tải ảnh thất bại!'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+    }
+  }
+
+  Future<void> _captureFromCamera() async {
+    if (_imageUrls.length >= 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã đạt tối đa 6 ảnh cho mỗi xe!'), backgroundColor: AppColors.warning),
+      );
+      return;
+    }
+
+    setState(() {
+      _isUploadingImage = true;
+      _uploadStatus = 'Đang tải ảnh lên Cloudinary...';
+    });
+
+    final res = await FileUploadService.pickAndUpload(source: ImageSource.camera, folder: 'vehicles');
+    if (!mounted) return;
+
+    setState(() {
+      _isUploadingImage = false;
+      _uploadStatus = '';
+    });
+
+    if (res['success'] == true && res['url'] != null) {
+      setState(() {
+        _imageUrls.add(res['url']);
+        if (_thumbnailController.text.isEmpty) {
+          _thumbnailController.text = res['url'];
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Chụp và tải ảnh lên thành công!'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } else if (res['message'] != 'Người dùng đã hủy chọn ảnh.') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['message'] ?? 'Lỗi tải ảnh lên'),
           backgroundColor: AppColors.danger,
         ),
       );
@@ -409,14 +520,215 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
               const SizedBox(height: 20),
 
               // Ảnh & Mô tả
-              const Text('3. Ảnh & Mô Tả', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary)),
-              const SizedBox(height: 12),
-
-              TextFormField(
-                controller: _thumbnailController,
-                decoration: const InputDecoration(labelText: 'URL Ảnh xe', border: OutlineInputBorder()),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Expanded(
+                    child: Text(
+                      '3. Hình Ảnh Xe (Tối đa 6 ảnh)',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _imageUrls.length >= 6 ? Colors.orange.shade100 : AppColors.primary.withAlpha(25),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${_imageUrls.length}/6 ảnh',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: _imageUrls.length >= 6 ? Colors.deepOrange : AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
+
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_imageUrls.isNotEmpty) ...[
+                      SizedBox(
+                        height: 120,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _imageUrls.length,
+                          separatorBuilder: (context, index) => const SizedBox(width: 10),
+                          itemBuilder: (context, index) {
+                            final url = _imageUrls[index];
+                            return Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Image.network(
+                                    ApiEndpoints.resolveImageUrl(url),
+                                    width: 120,
+                                    height: 120,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => Container(
+                                      width: 120,
+                                      height: 120,
+                                      color: Colors.grey.shade200,
+                                      child: const Icon(Icons.broken_image, color: Colors.grey),
+                                    ),
+                                  ),
+                                ),
+                                if (index == 0)
+                                  Positioned(
+                                    top: 4,
+                                    left: 4,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue.shade700,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        'Ảnh đại diện',
+                                        style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ),
+                                Positioned(
+                                  top: 4,
+                                  right: 4,
+                                  child: InkWell(
+                                    onTap: () {
+                                      setState(() {
+                                        _imageUrls.removeAt(index);
+                                        if (_imageUrls.isNotEmpty) {
+                                          _thumbnailController.text = _imageUrls.first;
+                                        } else {
+                                          _thumbnailController.clear();
+                                        }
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(2),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.close, size: 14, color: Colors.white),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        '💡 Ảnh đầu tiên sẽ là ảnh đại diện của xe. Bạn có thể bấm dấu X để xóa ảnh.',
+                        style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 10),
+                    ] else ...[
+                      Container(
+                        height: 110,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_photo_alternate_outlined, size: 38, color: AppColors.primary),
+                            SizedBox(height: 6),
+                            Text(
+                              'Chưa có ảnh xe. Vui lòng chọn tải lên tối đa 6 ảnh',
+                              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+
+                    if (_isUploadingImage)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                            const SizedBox(width: 10),
+                            Flexible(
+                              child: Text(
+                                _uploadStatus.isNotEmpty ? _uploadStatus : 'Đang tải ảnh lên...',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else if (_imageUrls.length < 6)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _pickMultiFromGallery,
+                              icon: const Icon(Icons.photo_library_outlined, size: 18),
+                              label: const Text('Thư viện (Chọn nhiều)'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _captureFromCamera,
+                              icon: const Icon(Icons.camera_alt_outlined, size: 18),
+                              label: const Text('Chụp ảnh'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(8),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.green.shade200),
+                        ),
+                        child: const Text(
+                          '✓ Đã chọn đủ 6 ảnh tối đa cho xe.',
+                          style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
 
               TextFormField(
                 controller: _descriptionController,

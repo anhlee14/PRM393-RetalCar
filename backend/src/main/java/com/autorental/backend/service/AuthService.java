@@ -161,20 +161,20 @@ public class AuthService {
 
     @Transactional
     public JwtResponse loginWithGoogle(GoogleLoginRequest request) {
-        String idToken = request.getIdToken();
-        if (idToken == null || idToken.trim().isEmpty()) {
-            throw new BadRequestException("Google ID Token không được để trống");
+        String token = request.getIdToken();
+        if (token == null || token.trim().isEmpty()) {
+            throw new BadRequestException("Google Token không được để trống");
         }
 
         // 1. Xác thực Google Token qua Google API (hỗ trợ cả JWT ID Token và OAuth2 Access Token ya29...)
         RestTemplate restTemplate = new RestTemplate();
         Map<String, Object> payload = null;
 
-        if (idToken.startsWith("ya29.")) {
+        if (token.startsWith("ya29.")) {
             // Access Token (Web GIS)
             try {
                 HttpHeaders headers = new HttpHeaders();
-                headers.setBearerAuth(idToken.trim());
+                headers.setBearerAuth(token.trim());
                 HttpEntity<Void> entity = new HttpEntity<>(headers);
                 ResponseEntity<Map> response = restTemplate.exchange(
                         "https://www.googleapis.com/oauth2/v3/userinfo",
@@ -186,7 +186,7 @@ public class AuthService {
             } catch (Exception e) {
                 log.warn("Lấy userinfo bằng Bearer token thất bại, thử tokeninfo: {}", e.getMessage());
                 try {
-                    String url = "https://oauth2.googleapis.com/tokeninfo?access_token=" + idToken.trim();
+                    String url = "https://oauth2.googleapis.com/tokeninfo?access_token=" + token.trim();
                     ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
                     payload = response.getBody();
                 } catch (Exception ex) {
@@ -196,14 +196,14 @@ public class AuthService {
         } else {
             // ID Token (JWT eyJ... từ Mobile hoặc OpenID Connect)
             try {
-                String googleApiUrl = "https://oauth2.googleapis.com/tokeninfo?id_token=" + idToken.trim();
+                String googleApiUrl = "https://oauth2.googleapis.com/tokeninfo?id_token=" + token.trim();
                 ResponseEntity<Map> response = restTemplate.getForEntity(googleApiUrl, Map.class);
                 payload = response.getBody();
             } catch (Exception e) {
                 log.warn("Xác thực id_token thất bại, thử userinfo header: {}", e.getMessage());
                 try {
                     HttpHeaders headers = new HttpHeaders();
-                    headers.setBearerAuth(idToken.trim());
+                    headers.setBearerAuth(token.trim());
                     HttpEntity<Void> entity = new HttpEntity<>(headers);
                     ResponseEntity<Map> response = restTemplate.exchange(
                             "https://www.googleapis.com/oauth2/v3/userinfo",
@@ -231,7 +231,8 @@ public class AuthService {
         } else if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
             email = request.getEmail().trim();
         } else {
-            throw new BadRequestException("Google ID Token không hợp lệ hoặc đã hết hạn!");
+            throw new BadRequestException("Google Token không hợp lệ hoặc đã hết hạn!");
+        }
         }
 
         // 2. Tìm hoặc tạo mới User

@@ -6,6 +6,7 @@ import '../../../data/models/user_model.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/file_upload_service.dart';
 import '../../vehicle_management/screens/owner_vehicle_list_screen.dart';
+import '../../vehicle_management/screens/admin_vehicle_approval_screen.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -396,7 +397,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 20),
 
             // Mục Quản lý xe cho thuê của tôi (Chức năng Thành viên 1)
-            Card(
+                        if (_user?.role == 'ROLE_ADMIN') ...[
+              Card(
+                elevation: 3,
+                color: const Color(0xFFF0FDF4),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: const BorderSide(color: Colors.green, width: 1.5),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  leading: const CircleAvatar(
+                    radius: 22,
+                    backgroundColor: Colors.green,
+                    child: Icon(Icons.admin_panel_settings, color: Colors.white),
+                  ),
+                  title: const Row(
+                    children: [
+                      Text(
+                        'Quản trị duyệt xe (Admin)',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green),
+                      ),
+                      SizedBox(width: 8),
+                      Badge(
+                        label: Text('ADMIN', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                        backgroundColor: Colors.redAccent,
+                      ),
+                    ],
+                  ),
+                  subtitle: const Text(
+                    'Xem toàn bộ xe đang chờ duyệt trên hệ thống, phê duyệt hoặc từ chối',
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.green),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (ctx) => const AdminVehicleApprovalScreen()),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+Card(
               elevation: 2,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),

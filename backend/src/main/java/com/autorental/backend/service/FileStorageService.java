@@ -29,7 +29,7 @@ public class FileStorageService {
             log.info("Bắt đầu tải file lên Cloudinary, thư mục: autorental/{}", subFolder);
             Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
                     "folder", "autorental/" + subFolder,
-                    "resource_type", "auto"
+                    "resource_type", "image"
             ));
 
             String secureUrl = (String) uploadResult.get("secure_url");

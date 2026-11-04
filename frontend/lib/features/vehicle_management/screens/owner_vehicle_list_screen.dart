@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/api_endpoints.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../data/models/user_model.dart';
@@ -337,7 +338,7 @@ class _OwnerVehicleListScreenState extends State<OwnerVehicleListScreen> {
                         Stack(
                           children: [
                             Image.network(
-                              v.thumbnailUrl ?? 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341',
+                              (v.thumbnailUrl != null && v.thumbnailUrl!.isNotEmpty) ? ApiEndpoints.resolveImageUrl(v.thumbnailUrl!) : 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341',
                               height: 160,
                               width: double.infinity,
                               fit: BoxFit.cover,
@@ -398,30 +399,29 @@ class _OwnerVehicleListScreenState extends State<OwnerVehicleListScreen> {
                                 ],
                               ),
                               const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  Text(
-                                    '${v.brand} • ${v.modelYear ?? 2024} • ${v.seats} chỗ • ${v.transmission}',
-                                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                                  ),
-                                ],
+
+                              // Thông số xe
+                              Text(
+                                '${v.brand} • ${v.seats} chỗ • ${v.transmission == 'AUTO' ? 'Tự động' : 'Số sàn'} • ${v.fuelType}',
+                                style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
                               ),
                               const SizedBox(height: 8),
 
-                              // Tùy chọn tài xế
+                              // Feature 1: Huy hiệu có tài xế (Nghiệp vụ cốt lõi của Người 1)
                               if (v.hasDriverOption)
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                   decoration: BoxDecoration(
                                     color: Colors.deepPurple.shade50,
-                                    borderRadius: BorderRadius.circular(6),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.deepPurple.shade200),
                                   ),
                                   child: Text(
                                     '🚗 Có tài xế (+${CurrencyFormatter.format(v.driverFeePerDay)}/ngày)',
-                                    style: TextStyle(
-                                      color: Colors.deepPurple.shade800,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.deepPurple,
                                     ),
                                   ),
                                 )
@@ -434,7 +434,7 @@ class _OwnerVehicleListScreenState extends State<OwnerVehicleListScreen> {
                                   ),
                                   child: const Text(
                                     '🚙 Chỉ cho thuê tự lái',
-                                    style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                                    style: TextStyle(fontSize: 12, color: Colors.grey),
                                   ),
                                 ),
                               const SizedBox(height: 12),
