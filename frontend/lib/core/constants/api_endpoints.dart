@@ -23,6 +23,7 @@ class ApiEndpoints {
   // Vehicles & Matching
   static String get vehicles => '$baseUrl/api/vehicles';
   static String get ownerVehicles => '$baseUrl/api/vehicles/owner';
+  static String get pendingVehicles => '$baseUrl/api/vehicles/pending';
   static String get matchVehicles => '$baseUrl/api/vehicles/match';
   static String vehicleDetail(int id) => '$vehicles/$id';
   static String approveVehicle(int id) => '$vehicles/$id/approve';
@@ -58,4 +59,17 @@ class ApiEndpoints {
 
   // File Upload
   static String get uploadFile => '$baseUrl/api/files/upload';
+
+  /// Đảm bảo URL ảnh hiển thị chuẩn xác trên cả Android Emulator và Web/Desktop
+  static String resolveImageUrl(String? url) {
+    if (url == null || url.trim().isEmpty) return '';
+    final trimmed = url.trim();
+    if (!kIsWeb && trimmed.contains('localhost:8080')) {
+      return trimmed.replaceFirst('localhost:8080', '10.0.2.2:8080');
+    }
+    if (kIsWeb && trimmed.contains('10.0.2.2:8080')) {
+      return trimmed.replaceFirst('10.0.2.2:8080', 'localhost:8080');
+    }
+    return trimmed;
+  }
 }

@@ -133,6 +133,11 @@ public class VehicleService {
     }
 
     @Transactional(readOnly = true)
+    public List<Vehicle> getPendingVehicles() {
+        return vehicleRepository.findByStatus(VehicleStatus.PENDING_APPROVAL);
+    }
+
+    @Transactional(readOnly = true)
     public List<Vehicle> getAllAvailableVehicles() {
         return vehicleRepository.findByStatus(VehicleStatus.AVAILABLE);
     }

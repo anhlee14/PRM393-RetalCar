@@ -157,24 +157,42 @@ public class AuthService {
 
     @Transactional
     public JwtResponse loginWithGoogle(GoogleLoginRequest request) {
-        String idToken = request.getIdToken();
-        if (idToken == null || idToken.trim().isEmpty()) {
-            throw new BadRequestException("Google ID Token không được để trống");
+        String token = request.getIdToken();
+        if (token == null || token.trim().isEmpty()) {
+            throw new BadRequestException("Google Token không được để trống");
         }
 
-        // 1. Xác thực Google ID Token qua Google Tokeninfo API
-        String googleApiUrl = "https://oauth2.googleapis.com/tokeninfo?id_token=" + idToken.trim();
+        // 1. Xác thực Google Token qua Google Tokeninfo hoặc Userinfo API (hỗ trợ cả id_token và access_token)
+        token = token.trim();
         RestTemplate restTemplate = new RestTemplate();
-        Map<String, Object> payload;
+        Map<String, Object> payload = null;
+
         try {
+            // Thử xác thực theo ID Token trước
+            String googleApiUrl = "https://oauth2.googleapis.com/tokeninfo?id_token=" + token;
             ResponseEntity<Map> response = restTemplate.getForEntity(googleApiUrl, Map.class);
             payload = response.getBody();
-            if (payload == null || payload.get("email") == null) {
-                throw new BadRequestException("Không thể lấy thông tin email từ Google ID Token");
+        } catch (Exception ignored) {
+            // Nếu không phải ID Token (trên Web thường trả về Access Token), gọi Google Userinfo API
+            try {
+                org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+                headers.setBearerAuth(token);
+                org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(headers);
+                ResponseEntity<Map> userinfoResponse = restTemplate.exchange(
+                        "https://www.googleapis.com/oauth2/v3/userinfo",
+                        org.springframework.http.HttpMethod.GET,
+                        entity,
+                        Map.class
+                );
+                payload = userinfoResponse.getBody();
+            } catch (Exception ex2) {
+                log.error("Google Token verification failed: {}", ex2.getMessage());
+                throw new BadRequestException("Google Token không hợp lệ hoặc đã hết hạn!");
             }
-        } catch (Exception e) {
-            log.error("Google Token verification failed: {}", e.getMessage());
-            throw new BadRequestException("Google ID Token không hợp lệ hoặc đã hết hạn!");
+        }
+
+        if (payload == null || payload.get("email") == null) {
+            throw new BadRequestException("Không thể lấy thông tin email từ Google Token");
         }
 
         String email = (String) payload.get("email");

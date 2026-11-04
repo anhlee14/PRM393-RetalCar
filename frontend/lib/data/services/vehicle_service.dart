@@ -15,7 +15,18 @@ class VehicleService {
     return [];
   }
 
-  static Future<List<VehicleModel>> getOwnerVehicles() async {
+  static Future<List<VehicleModel>> getPendingVehicles() async {
+    final response = await ApiClient.get(ApiEndpoints.pendingVehicles);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (data['success'] == true && data['data'] != null) {
+        return (data['data'] as List).map((e) => VehicleModel.fromJson(e)).toList();
+      }
+    }
+    return [];
+  }
+
+    static Future<List<VehicleModel>> getOwnerVehicles() async {
     final response = await ApiClient.get(ApiEndpoints.ownerVehicles);
     if (response.statusCode == 200) {
       final data = jsonDecode(utf8.decode(response.bodyBytes));
@@ -42,6 +53,7 @@ class VehicleService {
     String? description,
     String? address,
     String? thumbnailUrl,
+    List<String>? imageUrls,
   }) async {
     try {
       final body = {
@@ -58,7 +70,8 @@ class VehicleService {
         'model_year': modelYear ?? 2024,
         'description': description ?? '',
         'address': address ?? '',
-        'thumbnail_url': thumbnailUrl ?? '',
+        'thumbnail_url': thumbnailUrl ?? (imageUrls != null && imageUrls.isNotEmpty ? imageUrls.first : ''),
+        'image_urls': imageUrls ?? [],
       };
 
       final response = await ApiClient.post(ApiEndpoints.vehicles, body: body);
@@ -91,6 +104,7 @@ class VehicleService {
     String? description,
     String? address,
     String? thumbnailUrl,
+    List<String>? imageUrls,
   }) async {
     try {
       final body = {
@@ -107,7 +121,8 @@ class VehicleService {
         'model_year': modelYear ?? 2024,
         'description': description ?? '',
         'address': address ?? '',
-        'thumbnail_url': thumbnailUrl ?? '',
+        'thumbnail_url': thumbnailUrl ?? (imageUrls != null && imageUrls.isNotEmpty ? imageUrls.first : ''),
+        'image_urls': imageUrls ?? [],
       };
 
       final response = await ApiClient.put(ApiEndpoints.vehicleDetail(id), body: body);
@@ -140,7 +155,22 @@ class VehicleService {
   }
 
   // Admin duyệt xe cho thuê
-  static Future<Map<String, dynamic>> approveVehicle(int id) async {
+  // Admin t? ch?i duy?t xe
+  static Future<Map<String, dynamic>> rejectVehicle(int id) async {
+    try {
+      final response = await ApiClient.put(ApiEndpoints.rejectVehicle(id));
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': '? t? ch?i duy?t xe'};
+      } else {
+        return {'success': false, 'message': data['message'] ?? 'T? ch?i xe th?t b?i'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'L?i k?t n?i: $e'};
+    }
+  }
+
+    static Future<Map<String, dynamic>> approveVehicle(int id) async {
     try {
       final response = await ApiClient.put(ApiEndpoints.approveVehicle(id));
       final data = jsonDecode(utf8.decode(response.bodyBytes));

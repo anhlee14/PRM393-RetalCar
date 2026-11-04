@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/api_endpoints.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../data/models/vehicle_model.dart';
@@ -87,23 +88,6 @@ class _OwnerVehicleListScreenState extends State<OwnerVehicleListScreen> {
           content: Text(res['message'] ?? 'Không thể xóa xe lúc này.'),
           backgroundColor: AppColors.danger,
         ),
-      );
-    }
-  }
-
-  void _handleApproveVehicle(VehicleModel vehicle) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final res = await VehicleService.approveVehicle(vehicle.id);
-    if (!mounted) return;
-
-    if (res['success'] == true) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Admin đã duyệt xe thành công! Xe đã hiển thị công khai.'), backgroundColor: AppColors.success),
-      );
-      _fetchVehicles();
-    } else {
-      messenger.showSnackBar(
-        SnackBar(content: Text(res['message'] ?? 'Lỗi khi duyệt xe'), backgroundColor: AppColors.danger),
       );
     }
   }
@@ -238,7 +222,7 @@ class _OwnerVehicleListScreenState extends State<OwnerVehicleListScreen> {
                                     color: Colors.grey.shade200,
                                     child: (v.thumbnailUrl != null && v.thumbnailUrl!.isNotEmpty)
                                         ? Image.network(
-                                            v.thumbnailUrl!,
+                                            ApiEndpoints.resolveImageUrl(v.thumbnailUrl!),
                                             fit: BoxFit.cover,
                                             errorBuilder: (context, error, stackTrace) => const Icon(
                                               Icons.directions_car,
@@ -356,12 +340,6 @@ class _OwnerVehicleListScreenState extends State<OwnerVehicleListScreen> {
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.end,
                                       children: [
-                                        if (v.status == 'PENDING_APPROVAL')
-                                          TextButton.icon(
-                                            onPressed: () => _handleApproveVehicle(v),
-                                            icon: const Icon(Icons.check_circle_outline, size: 18, color: Colors.green),
-                                            label: const Text('Duyệt xe (Demo)', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                                          ),
                                         TextButton.icon(
                                           onPressed: () => _navigateToEditVehicle(v),
                                           icon: const Icon(Icons.edit_outlined, size: 18),

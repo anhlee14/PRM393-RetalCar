@@ -45,15 +45,16 @@ class AuthService {
       }
 
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final idToken = googleAuth.idToken;
+      // Trên Web Google có thể trả về accessToken thay vì idToken
+      final token = googleAuth.idToken ?? googleAuth.accessToken;
 
-      if (idToken == null || idToken.isEmpty) {
-        return {'success': false, 'message': 'Không thể lấy ID Token từ Google. Vui lòng thử lại.'};
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'Không thể lấy Token xác thực từ Google. Vui lòng thử lại.'};
       }
 
       final response = await ApiClient.post(
         ApiEndpoints.googleLogin,
-        body: {'id_token': idToken},
+        body: {'id_token': token},
       );
 
       final data = jsonDecode(utf8.decode(response.bodyBytes));

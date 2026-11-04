@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/api_endpoints.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/services/auth_service.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../auth/screens/profile_screen.dart';
+import '../../vehicle_management/screens/admin_vehicle_approval_screen.dart';
 import '../../vehicle_management/screens/owner_vehicle_list_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -47,20 +49,25 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Xin chào, $userName!',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 2),
-                    const Text(
-                      'Bạn muốn tìm thuê xe hay cho thuê xe hôm nay?',
-                      style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Xin chào, $userName!',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Bạn muốn tìm thuê xe hay cho thuê xe hôm nay?',
+                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 InkWell(
                   onTap: () {
                     if (_currentUser != null) {
@@ -91,63 +98,123 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Banner Dành cho Chủ xe (Đăng xe cho thuê & Kiếm thu nhập)
-            Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+            // Banner Dành cho Admin nếu tài khoản có quyền Admin
+            if (_currentUser?.role == 'ROLE_ADMIN')
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF047857), Color(0xFF10B981)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(color: Colors.green.withAlpha(50), blurRadius: 6, offset: const Offset(0, 3)),
+                  ],
                 ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 6, offset: const Offset(0, 3)),
-                ],
-              ),
-              child: Row(
-                children: [
-                  const CircleAvatar(
-                    backgroundColor: Colors.white24,
-                    radius: 22,
-                    child: Icon(Icons.garage_rounded, color: Colors.white, size: 26),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Cho thuê xe cùng AutoRental',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Đăng tải xe, theo dõi duyệt xe & quản lý xe của bạn',
-                          style: TextStyle(color: Colors.white70, fontSize: 11),
-                        ),
-                      ],
+                child: Row(
+                  children: [
+                    const CircleAvatar(
+                      backgroundColor: Colors.white24,
+                      radius: 22,
+                      child: Icon(Icons.admin_panel_settings, color: Colors.white, size: 26),
                     ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (ctx) => const OwnerVehicleListScreen()),
-                      ).then((_) => _fetchUser());
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF1E3A8A),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Quản Trị Duyệt Xe Hệ Thống',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Phê duyệt hoặc từ chối các xe mới đăng ký',
+                            style: TextStyle(color: Colors.white70, fontSize: 11),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: const Text('Quản lý xe', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFF047857),
+                        elevation: 1,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (ctx) => const AdminVehicleApprovalScreen()),
+                        );
+                      },
+                      child: const Text('Duyệt xe', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              )
+            else
+              // Banner Dành cho Chủ xe (Đăng xe cho thuê & Kiếm thu nhập)
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                ],
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 6, offset: const Offset(0, 3)),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const CircleAvatar(
+                      backgroundColor: Colors.white24,
+                      radius: 22,
+                      child: Icon(Icons.garage_rounded, color: Colors.white, size: 26),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Cho thuê xe cùng AutoRental',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Đăng tải xe, theo dõi duyệt xe & quản lý xe của bạn',
+                            style: TextStyle(color: Colors.white70, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (ctx) => const OwnerVehicleListScreen()),
+                        ).then((_) => _fetchUser());
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFF1E3A8A),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text('Quản lý xe', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    ),
+                  ],
+                ),
               ),
-            ),
 
             // Search Bar (Bấm vào chuyển sang Tab Khám phá xe)
             InkWell(
@@ -409,7 +476,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                 child: Image.network(
-                  imageUrl,
+                  ApiEndpoints.resolveImageUrl(imageUrl),
                   height: 150,
                   width: double.infinity,
                   fit: BoxFit.cover,
