@@ -51,6 +51,7 @@ class ApiEndpoints {
   // Payments (Màn hình Thanh toán & Hóa đơn)
   static String get checkoutPayment => '$baseUrl/api/payments/checkout';
   static String bookingPayments(int bookingId) => '$baseUrl/api/payments/booking/$bookingId';
+  static String checkPaymentStatus(int bookingId) => '$baseUrl/api/payments/check-status/$bookingId';
 
   // Inspections (Before & After)
   static String get inspections => '$baseUrl/api/inspections';

@@ -8,6 +8,7 @@ import 'package:car_rental_app/features/booking/screens/checkout_payment_screen.
 import 'package:car_rental_app/features/booking/screens/booking_history_screen.dart';
 import 'package:car_rental_app/features/inspection/screens/photo_inspection_screen.dart';
 import 'package:car_rental_app/features/inspection/screens/comparison_screen.dart';
+import 'package:car_rental_app/features/inspection/screens/checkin_review_screen.dart';
 
 void main() {
   group('1. BookingModel Unit Tests', () {
@@ -268,6 +269,19 @@ void main() {
       await tester.pump();
 
       expect(find.text('Đối Chiếu Trước & Sau (Before/After)'), findsOneWidget);
+    });
+  });
+
+  group('8. CheckInReviewScreen Widget Tests', () {
+    testWidgets('Renders CheckInReviewScreen empty state when loading finished with null', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: CheckInReviewScreen(bookingId: 999),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Biên Bản Nhận Xe (Chủ Xe Giao)'), findsOneWidget);
     });
   });
 }

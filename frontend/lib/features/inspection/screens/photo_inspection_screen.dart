@@ -7,11 +7,17 @@ import '../../../data/services/inspection_service.dart';
 class PhotoInspectionScreen extends StatefulWidget {
   final int bookingId;
   final String stage; // 'CHECK_IN' hoặc 'CHECK_OUT'
+  final bool? isOwner;
+  final String? title;
+  final String? submitButtonText;
 
   const PhotoInspectionScreen({
     super.key,
     required this.bookingId,
     this.stage = 'CHECK_IN',
+    this.isOwner,
+    this.title,
+    this.submitButtonText,
   });
 
   @override
@@ -296,7 +302,7 @@ class _PhotoInspectionScreenState extends State<PhotoInspectionScreen> {
   @override
   Widget build(BuildContext context) {
     final stageColor = _isCheckIn ? AppColors.primary : AppColors.warning;
-    final stageTitle = _isCheckIn ? 'BIÊN BẢN NHẬN XE (CHECK-IN)' : 'BIÊN BẢN TRẢ XE (CHECK-OUT)';
+    final stageTitle = widget.title ?? (_isCheckIn ? 'BIÊN BẢN NHẬN XE (CHECK-IN)' : 'BIÊN BẢN TRẢ XE (CHECK-OUT)');
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -350,7 +356,7 @@ class _PhotoInspectionScreenState extends State<PhotoInspectionScreen> {
                           const Icon(Icons.check_circle_outline_rounded, size: 20),
                           const SizedBox(width: 8),
                           Text(
-                            _isCheckIn ? 'GỬI BIÊN BẢN NHẬN XE' : 'GỬI BIÊN BẢN TRẢ XE',
+                            widget.submitButtonText ?? (_isCheckIn ? 'GỬI BIÊN BẢN NHẬN XE' : 'GỬI BIÊN BẢN TRẢ XE'),
                             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 0.5),
                           ),
                         ],
@@ -383,8 +389,8 @@ class _PhotoInspectionScreenState extends State<PhotoInspectionScreen> {
               children: [
                 Text(
                   _isCheckIn
-                      ? 'Nghiệp vụ Thẩm định Lúc Nhận Xe'
-                      : 'Nghiệp vụ Thẩm định Lúc Trả Xe (Đối Chiếu)',
+                      ? (widget.isOwner == true ? 'Chủ Xe Thực Hiện Giao Xe (Check-in)' : 'Nghiệp vụ Thẩm định Lúc Nhận Xe')
+                      : (widget.isOwner == false ? 'Khách Thuê Hoàn Trả Xe (Check-out)' : 'Nghiệp vụ Thẩm định Lúc Trả Xe (Đối Chiếu)'),
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -394,8 +400,12 @@ class _PhotoInspectionScreenState extends State<PhotoInspectionScreen> {
                 const SizedBox(height: 4),
                 Text(
                   _isCheckIn
-                      ? 'Chụp 6 góc ảnh tiêu chuẩn và ghi nhận chỉ số ODO, xăng/pin ban đầu để bảo vệ quyền lợi của bạn khi trả xe.'
-                      : 'Chụp lại 6 góc xe lúc hoàn trả để hệ thống tự động so sánh đối chiếu Before/After, minh bạch cọc và tránh tranh chấp.',
+                      ? (widget.isOwner == true
+                          ? 'Chủ xe chụp 6 góc ảnh hiện trạng xe, ghi nhận số ODO và lượng xăng/pin lúc bàn giao chìa khóa để gửi khách thuê kiểm tra và ký nhận.'
+                          : 'Chụp 6 góc ảnh tiêu chuẩn và ghi nhận chỉ số ODO, xăng/pin ban đầu để bảo vệ quyền lợi của bạn khi trả xe.')
+                      : (widget.isOwner == false
+                          ? 'Người thuê chụp lại 6 góc xe lúc hoàn trả, ghi nhận số ODO và lượng xăng/pin để gửi chủ xe đối chiếu và hoàn cọc.'
+                          : 'Chụp lại 6 góc xe lúc hoàn trả để hệ thống tự động so sánh đối chiếu Before/After, minh bạch cọc và tránh tranh chấp.'),
                   style: const TextStyle(fontSize: 12, color: AppColors.textPrimary, height: 1.35),
                 ),
               ],

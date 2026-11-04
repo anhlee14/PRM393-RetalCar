@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:qr_flutter/qr_flutter.dart';
+import '../../../core/utils/vietqr_generator.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
@@ -6,6 +9,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../data/models/booking_model.dart';
 import '../../../data/services/payment_service.dart';
 import 'booking_history_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CheckoutPaymentScreen extends StatefulWidget {
   final BookingModel booking;
@@ -19,7 +23,47 @@ class CheckoutPaymentScreen extends StatefulWidget {
 class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
   String _selectedPaymentMethod = 'BANK_TRANSFER_QR'; // BANK_TRANSFER_QR, VNPAY_MOCK, CASH
   bool _agreedToTerms = false;
+  bool _hasTransferred = false;
   bool _isProcessing = false;
+  Timer? _pollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startAutoCheckTimer();
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startAutoCheckTimer() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      _checkPaymentRealtime();
+    });
+  }
+
+  Future<void> _checkPaymentRealtime({bool showManualNotice = false}) async {
+    if (_isProcessing) return;
+    final isPaid = await PaymentService.checkDepositStatus(widget.booking.id);
+    if (!mounted) return;
+    if (isPaid) {
+      _pollTimer?.cancel();
+      await _recordDepositPaid();
+      _showSuccessDialog();
+    } else if (showManualNotice) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Chưa ghi nhận biến động số dư chuyển khoản từ ngân hàng. Vui lòng thử lại sau khi chuyển tiền!'),
+          backgroundColor: AppColors.warning,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
+  }
 
   final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
 
@@ -28,6 +72,18 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
     final addInfo = Uri.encodeComponent('AUTORENTAL BK${widget.booking.id}');
     final accountName = Uri.encodeComponent('NGUYEN THANH PHONG');
     return 'https://img.vietqr.io/image/mbbank-69999968888-compact2.png?amount=$amount&addInfo=$addInfo&accountName=$accountName';
+  }
+
+  Future<void> _recordDepositPaid() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList('paid_deposit_bookings') ?? [];
+      final idStr = widget.booking.id.toString();
+      if (!list.contains(idStr)) {
+        list.add(idStr);
+        await prefs.setStringList('paid_deposit_bookings', list);
+      }
+    } catch (_) {}
   }
 
   void _copyToClipboard(String text, String message) {
@@ -45,12 +101,68 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
     if (!_agreedToTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Vui lòng đồng ý với quy định cọc và chính sách bảo vệ xe!'),
+          content: Text('Vui lòng tích đồng ý với quy định cọc 30% và chính sách bảo vệ xe!'),
           backgroundColor: AppColors.danger,
+          duration: Duration(seconds: 3),
         ),
       );
       return;
     }
+
+    if (!_hasTransferred) {
+      final msg = _selectedPaymentMethod == 'BANK_TRANSFER_QR'
+          ? 'Bạn chưa xác nhận chuyển khoản! Vui lòng quét mã QR, chuyển tiền trên app ngân hàng và tích xác nhận "ĐÃ CHUYỂN KHOẢN THÀNH CÔNG".'
+          : _selectedPaymentMethod == 'CASH'
+              ? 'Vui lòng tích cam kết thanh toán cọc bằng tiền mặt khi gặp chủ xe trước khi tiếp tục!'
+              : 'Vui lòng tích xác nhận bạn đã hoàn tất thanh toán cọc qua ví điện tử!';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: AppColors.danger,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.verified_user_rounded, color: AppColors.primary),
+            SizedBox(width: 8),
+            Text('Xác Nhận Nộp Cọc', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Text(
+          _selectedPaymentMethod == 'BANK_TRANSFER_QR'
+              ? 'Bạn xác nhận đã thực hiện chuyển khoản thành công ${CurrencyFormatter.format(widget.booking.depositAmount)} đến STK MB Bank 69999968888?\n\nChủ xe sẽ đối soát sao kê ngân hàng để duyệt đơn và tiến hành bàn giao xe.'
+              : _selectedPaymentMethod == 'CASH'
+                  ? 'Bạn xác nhận sẽ thanh toán trực tiếp số tiền cọc ${CurrencyFormatter.format(widget.booking.depositAmount)} cho chủ xe khi nhận bàn giao xe?'
+                  : 'Bạn xác nhận đã thanh toán cọc ${CurrencyFormatter.format(widget.booking.depositAmount)} qua ví điện tử?',
+          style: const TextStyle(fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Kiểm tra lại'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Xác nhận đã nộp cọc'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
 
     setState(() => _isProcessing = true);
 
@@ -65,6 +177,7 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
       if (!mounted) return;
 
       if (result['success'] == true) {
+        await _recordDepositPaid();
         _showSuccessDialog();
       } else {
         if (!mounted) return;
@@ -92,8 +205,9 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                 ),
-                onPressed: () {
+                onPressed: () async {
                   Navigator.pop(ctx);
+                  await _recordDepositPaid();
                   _showSuccessDialog();
                 },
                 child: const Text('Mô phỏng Thành công'),
@@ -111,52 +225,87 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.success.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
+      builder: (ctx) {
+        // Tự động chuyển về trang đơn thuê sau 1.8 giây
+        Future.delayed(const Duration(milliseconds: 1800), () {
+          if (ctx.mounted) {
+            Navigator.of(ctx).pop();
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => const BookingHistoryScreen()),
+              (route) => route.isFirst,
+            );
+          }
+        });
+
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 54),
               ),
-              child: const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 54),
-            ),
-            const SizedBox(height: 14),
-            const Text(
-              'Thanh Toán Cọc Thành Công!',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              const SizedBox(height: 14),
+              const Text(
+                'Thanh Toán Cọc Thành Công!',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Đơn thuê #BK-${widget.booking.id} đã được ghi nhận thanh toán tiền cọc (${CurrencyFormatter.format(widget.booking.depositAmount)}). Chủ xe sẽ liên hệ bàn giao xe theo lịch hẹn!',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+              ),
+              const SizedBox(height: 14),
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.success),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Đang tự động chuyển về trang đơn thuê...',
+                    style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+              ),
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const BookingHistoryScreen()),
+                  (route) => route.isFirst,
+                );
+              },
+              child: const Text('XEM LỊCH SỬ CHUYẾN ĐI', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
-        ),
-        content: Text(
-          'Đơn thuê #BK-${widget.booking.id} đã được ghi nhận thanh toán tiền cọc (${CurrencyFormatter.format(widget.booking.depositAmount)}). Chủ xe sẽ liên hệ bàn giao xe theo lịch hẹn!',
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
-        ),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
-            ),
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const BookingHistoryScreen()),
-                (route) => route.isFirst,
-              );
-            },
-            child: const Text('XEM LỊCH SỬ CHUYẾN ĐI', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -220,6 +369,23 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
                         ),
                       ],
                     ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: () {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const BookingHistoryScreen()),
+                  (route) => route.isFirst,
+                );
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.textSecondary,
+                side: const BorderSide(color: AppColors.border),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: const Text('Để sau (Xem trong Lịch sử đơn thuê)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
             ),
             const SizedBox(height: 24),
           ],
@@ -427,6 +593,10 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
             value: 'VNPAY_MOCK',
             icon: Icons.account_balance_rounded,
           ),
+          if (_selectedPaymentMethod == 'VNPAY_MOCK') ...[
+            const SizedBox(height: 8),
+            _buildEWalletSection(),
+          ],
 
           const Divider(height: 16),
 
@@ -437,6 +607,10 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
             value: 'CASH',
             icon: Icons.payments_rounded,
           ),
+          if (_selectedPaymentMethod == 'CASH') ...[
+            const SizedBox(height: 8),
+            _buildCashNoticeSection(),
+          ],
         ],
       ),
     );
@@ -451,7 +625,7 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
     final isSelected = _selectedPaymentMethod == value;
 
     return InkWell(
-      onTap: () => setState(() => _selectedPaymentMethod = value),
+      onTap: () => setState(() { _selectedPaymentMethod = value; _hasTransferred = false; }),
       borderRadius: BorderRadius.circular(12),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
@@ -461,7 +635,7 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
               value: value,
               groupValue: _selectedPaymentMethod,
               onChanged: (val) {
-                if (val != null) setState(() => _selectedPaymentMethod = val);
+                if (val != null) setState(() { _selectedPaymentMethod = val; _hasTransferred = false; });
               },
               activeColor: AppColors.primary,
             ),
@@ -512,46 +686,71 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
             style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
           ),
           const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.network(
-              _vietQrUrl,
-              width: 220,
-              height: 220,
-              fit: BoxFit.contain,
-              loadingBuilder: (context, child, progress) {
-                if (progress == null) return child;
-                return Container(
-                  width: 220,
-                  height: 220,
-                  color: Colors.white,
-                  child: const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                QrImageView(
+                  data: VietQrGenerator.generateVietQrPayload(
+                    amount: widget.booking.depositAmount,
+                    memo: 'AUTORENTAL BK${widget.booking.id}',
                   ),
-                );
-              },
-              errorBuilder: (ctx, err, stack) => Image.asset(
-                'assets/images/qr_mbbank.jpg',
-                width: 220,
-                height: 220,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  width: 220,
-                  height: 220,
-                  color: Colors.white,
-                  child: const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.qr_code_2_rounded, size: 80, color: AppColors.primary),
-                      SizedBox(height: 8),
-                      Text(
-                        'MB Bank - NGUYEN THANH PHONG',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                    ],
+                  version: QrVersions.auto,
+                  size: 200.0,
+                  backgroundColor: Colors.white,
+                  errorCorrectionLevel: QrErrorCorrectLevel.M,
+                  padding: const EdgeInsets.all(4),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.qr_code_scanner_rounded, size: 14, color: AppColors.primary),
+                    SizedBox(width: 4),
+                    Text(
+                      'Tự động gen mã VietQR NAPAS 24/7',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primary),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.only(top: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Row(
+              children: const [
+                SizedBox(
+                  width: 13,
+                  height: 13,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Đang tự động chờ giao dịch chuyển khoản từ ngân hàng...',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
                   ),
                 ),
-              ),
+              ],
             ),
           ),
           const SizedBox(height: 12),
@@ -589,7 +788,192 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
               _copyToClipboard('69999968888\n$contentSyntax', 'Đã sao chép STK MB Bank và Nội dung chuyển khoản!');
             },
           ),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: () => _checkPaymentRealtime(showManualNotice: true),
+            icon: const Icon(Icons.sync_rounded, size: 16),
+            label: const Text('Kiểm tra giao dịch ngân hàng ngay', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _hasTransferred ? Colors.green.shade50 : Colors.amber.shade50,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: _hasTransferred ? AppColors.success : Colors.amber.shade400,
+                width: 1.2,
+              ),
+            ),
+            child: InkWell(
+              onTap: () => setState(() => _hasTransferred = !_hasTransferred),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Checkbox(
+                    value: _hasTransferred,
+                    activeColor: AppColors.success,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                    onChanged: (val) => setState(() => _hasTransferred = val ?? false),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: RichText(
+                        text: TextSpan(
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _hasTransferred ? Colors.green.shade900 : Colors.brown.shade800,
+                            height: 1.4,
+                          ),
+                          children: [
+                            const TextSpan(
+                              text: 'Tôi xác nhận ',
+                              style: TextStyle(fontWeight: FontWeight.normal),
+                            ),
+                            const TextSpan(
+                              text: 'ĐÃ CHUYỂN KHOẢN THÀNH CÔNG ',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            TextSpan(
+                              text: '${CurrencyFormatter.format(depositInt)} ',
+                              style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.danger),
+                            ),
+                            const TextSpan(
+                              text: 'đến STK MB Bank 69999968888 (NGUYEN THANH PHONG) từ ứng dụng ngân hàng của tôi.',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEWalletSection() {
+    return Container(
+      margin: const EdgeInsets.only(top: 4, bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _hasTransferred ? Colors.green.shade50 : Colors.purple.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: _hasTransferred ? AppColors.success : Colors.purple.shade300,
+          width: 1.2,
+        ),
+      ),
+      child: InkWell(
+        onTap: () => setState(() => _hasTransferred = !_hasTransferred),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Checkbox(
+              value: _hasTransferred,
+              activeColor: AppColors.success,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+              onChanged: (val) => setState(() => _hasTransferred = val ?? false),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: RichText(
+                  text: TextSpan(
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _hasTransferred ? Colors.green.shade900 : Colors.purple.shade900,
+                      height: 1.4,
+                    ),
+                    children: [
+                      const TextSpan(
+                        text: 'Tôi xác nhận ',
+                        style: TextStyle(fontWeight: FontWeight.normal),
+                      ),
+                      const TextSpan(
+                        text: 'ĐÃ HOÀN TẤT THANH TOÁN CỌC ',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      TextSpan(
+                        text: '${CurrencyFormatter.format(widget.booking.depositAmount)} ',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.danger),
+                      ),
+                      const TextSpan(
+                        text: 'qua cổng ví điện tử MoMo / VNPay.',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCashNoticeSection() {
+    return Container(
+      margin: const EdgeInsets.only(top: 4, bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _hasTransferred ? Colors.green.shade50 : Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: _hasTransferred ? AppColors.success : Colors.blue.shade300,
+          width: 1.2,
+        ),
+      ),
+      child: InkWell(
+        onTap: () => setState(() => _hasTransferred = !_hasTransferred),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Checkbox(
+              value: _hasTransferred,
+              activeColor: AppColors.success,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+              onChanged: (val) => setState(() => _hasTransferred = val ?? false),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: RichText(
+                  text: TextSpan(
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _hasTransferred ? Colors.green.shade900 : Colors.blue.shade900,
+                      height: 1.4,
+                    ),
+                    children: [
+                      const TextSpan(
+                        text: 'Tôi cam kết ',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const TextSpan(
+                        text: 'sẽ thanh toán đủ số tiền cọc ',
+                      ),
+                      TextSpan(
+                        text: '${CurrencyFormatter.format(widget.booking.depositAmount)} ',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.danger),
+                      ),
+                      const TextSpan(
+                        text: 'bằng tiền mặt trực tiếp cho chủ xe khi nhận bàn giao chìa khóa.',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
