@@ -3,6 +3,9 @@ import '../../../core/constants/api_endpoints.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../data/models/user_model.dart';
+import '../../../data/models/vehicle_model.dart';
+import '../../../data/services/vehicle_service.dart';
+import '../../matching_explore/screens/vehicle_detail_screen.dart';
 import '../../../data/services/auth_service.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../auth/screens/profile_screen.dart';
@@ -21,11 +24,20 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentNavIndex = 0;
   UserModel? _currentUser;
+  List<VehicleModel> _recommendedVehicles = [];
+  bool _isLoadingVehicles = true;
 
   @override
   void initState() {
     super.initState();
-    _fetchUser();
+    _fetchData();
+  }
+
+  Future<void> _fetchData() async {
+    await Future.wait([
+      _fetchUser(),
+      _fetchRecommendedVehicles(),
+    ]);
   }
 
   Future<void> _fetchUser() async {
@@ -36,11 +48,32 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Future<void> _fetchRecommendedVehicles() async {
+    setState(() => _isLoadingVehicles = true);
+    try {
+      final vehicles = await VehicleService.getAvailableVehicles();
+      // Sắp xếp danh sách xe theo năm sản xuất mới nhất (modelYear giảm dần)
+      vehicles.sort((a, b) {
+        final yearA = a.modelYear ?? 0;
+        final yearB = b.modelYear ?? 0;
+        return yearB.compareTo(yearA);
+      });
+      if (!mounted) return;
+      setState(() {
+        _recommendedVehicles = vehicles.take(2).toList();
+        _isLoadingVehicles = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoadingVehicles = false);
+    }
+  }
+
   Widget _buildHomeContent() {
     final userName = _currentUser?.fullName ?? 'Quý khách';
 
     return RefreshIndicator(
-      onRefresh: _fetchUser,
+      onRefresh: _fetchData,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -362,48 +395,58 @@ const SizedBox(width: 12),
             ),
             const SizedBox(height: 24),
 
-            // Featured Cars Section
+            // Featured Recommended Cars Section (Top 2 theo năm sản xuất mới nhất)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Xe Khớp Nhất Với Bạn (Smart Matching)',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                const Row(
+                  children: [
+                    Icon(Icons.auto_awesome, color: AppColors.primary, size: 20),
+                    SizedBox(width: 6),
+                    Text(
+                      'Xe Đề Xuất Mới Nhất',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ],
                 ),
                 TextButton(
                   onPressed: () => setState(() => _currentNavIndex = 1),
-                  child: const Text('Xem tất cả', style: TextStyle(fontSize: 13)),
+                  child: const Text('Xem tất cả', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
             const SizedBox(height: 8),
 
-            // Featured Sample Car 1 (VinFast VF8)
-            _buildCarCard(
-              name: 'VinFast VF8 Plus 2024',
-              brand: 'VinFast',
-              matchScore: 98,
-              pricePerDay: 1200000,
-              driverFee: 450000,
-              hasDriver: true,
-              seats: 5,
-              imageUrl: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341',
-              distanceKm: 2.1,
-            ),
-            const SizedBox(height: 12),
-
-            // Featured Sample Car 2 (Toyota Camry)
-            _buildCarCard(
-              name: 'Toyota Camry 2.5Q 2023',
-              brand: 'Toyota',
-              matchScore: 85,
-              pricePerDay: 1100000,
-              driverFee: 400000,
-              hasDriver: true,
-              seats: 5,
-              imageUrl: 'https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb',
-              distanceKm: 3.5,
-            ),
+            if (_isLoadingVehicles)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (_recommendedVehicles.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: const Center(
+                  child: Text(
+                    'Hiện chưa có xe nào sẵn sàng cho thuê.',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                ),
+              )
+            else
+              ..._recommendedVehicles.map(
+                (vehicle) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildRecommendedCarCard(vehicle),
+                ),
+              ),
             const SizedBox(height: 24),
 
             // Trust & Features Commitment Banner
@@ -476,108 +519,179 @@ const SizedBox(width: 12),
     );
   }
 
-  Widget _buildCarCard({
-    required String name,
-    required String brand,
-    required int matchScore,
-    required double pricePerDay,
-    required double driverFee,
-    required bool hasDriver,
-    required int seats,
-    required String imageUrl,
-    required double distanceKm,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 6, offset: const Offset(0, 2)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                child: Image.network(
-                  ApiEndpoints.resolveImageUrl(imageUrl),
-                  height: 150,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (ctx, err, stack) => Container(
-                    height: 150,
-                    color: Colors.grey.shade200,
-                    child: const Center(child: Icon(Icons.directions_car, size: 48, color: Colors.grey)),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 10,
-                right: 10,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: matchScore >= 80 ? Colors.green : Colors.orange,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
-                  ),
-                  child: Text(
-                    '$matchScore% MATCH',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
-                  ),
-                ),
-              ),
-            ],
+  Widget _buildRecommendedCarCard(VehicleModel vehicle) {
+    final year = vehicle.modelYear != null ? 'Đời ${vehicle.modelYear}' : 'Mới nhất';
+
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (ctx) => VehicleDetailScreen(vehicle: vehicle),
           ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        ).then((_) => _fetchRecommendedVehicles());
+      },
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(8),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Ảnh xe + Badge Đề xuất theo năm sản xuất
+            Stack(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        name,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                (vehicle.thumbnailUrl != null && vehicle.thumbnailUrl!.isNotEmpty)
+                    ? Image.network(
+                        ApiEndpoints.resolveImageUrl(vehicle.thumbnailUrl!),
+                        height: 160,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (ctx, err, stack) => Container(
+                          height: 160,
+                          color: Colors.grey.shade200,
+                          child: const Center(
+                            child: Icon(Icons.directions_car, size: 54, color: Colors.grey),
+                          ),
+                        ),
+                      )
+                    : Container(
+                        height: 160,
+                        color: Colors.grey.shade200,
+                        child: const Center(
+                          child: Icon(Icons.directions_car, size: 54, color: Colors.grey),
+                        ),
+                      ),
+                Positioned(
+                  top: 10,
+                  left: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.verified, color: Colors.amber, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          'ĐỀ XUẤT • $year',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 10,
+                  right: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withAlpha(180),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${CurrencyFormatter.format(vehicle.basePricePerDay)}/ngày',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
                       ),
                     ),
-                    Text(
-                      '${CurrencyFormatter.format(pricePerDay)}/ngày',
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(Icons.location_on, size: 14, color: Colors.grey.shade600),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Cách bạn $distanceKm km • $seats chỗ',
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                if (hasDriver)
-                  Text(
-                    'Hỗ trợ kèm tài xế (+${CurrencyFormatter.format(driverFee)}/ngày)',
-                    style: const TextStyle(fontSize: 12, color: Colors.deepPurple, fontWeight: FontWeight.w600),
                   ),
+                ),
               ],
             ),
-          ),
-        ],
+
+            // Thông tin chi tiết xe
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          vehicle.name,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '${vehicle.brand} • ${vehicle.seats} chỗ • ${vehicle.transmission == 'AUTO' ? 'Tự động' : 'Số sàn'} • ${vehicle.fuelType}',
+                    style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Feature 1: Huy hiệu kèm tài xế
+                  if (vehicle.hasDriverOption)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.deepPurple.shade50,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.deepPurple.shade100),
+                      ),
+                      child: Text(
+                        '🚗 Hỗ trợ kèm tài xế (+${CurrencyFormatter.format(vehicle.driverFeePerDay)}/ngày)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.deepPurple.shade800,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        '🚙 Thuê xe tự lái',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
-
 
   Widget _buildMyBookingsStub() {
     return Scaffold(
