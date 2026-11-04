@@ -664,7 +664,7 @@ const SizedBox(width: 12),
                         border: Border.all(color: Colors.deepPurple.shade100),
                       ),
                       child: Text(
-                        '🚗 Hỗ trợ kèm tài xế (+${CurrencyFormatter.format(vehicle.driverFeePerDay)}/ngày)',
+                        'Hỗ trợ kèm tài xế (+${CurrencyFormatter.format(vehicle.driverFeePerDay)}/ngày)',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.deepPurple.shade800,
@@ -680,7 +680,7 @@ const SizedBox(width: 12),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: const Text(
-                        '🚙 Thuê xe tự lái',
+                        'Thuê xe tự lái',
                         style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                       ),
                     ),
