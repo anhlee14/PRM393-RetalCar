@@ -227,6 +227,9 @@ const SizedBox(width: 12),
                       ),
                       child: const Text('Quản lý xe', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                     ),
+                  ],
+                ),
+              ),
 
             // Search Bar (Bấm vào chuyển sang Tab Khám phá xe)
             InkWell(

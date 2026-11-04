@@ -233,7 +233,6 @@ public class AuthService {
         } else {
             throw new BadRequestException("Google Token không hợp lệ hoặc đã hết hạn!");
         }
-        }
 
         // 2. Tìm hoặc tạo mới User
         Optional<User> existingUser = userRepository.findByEmail(email);
