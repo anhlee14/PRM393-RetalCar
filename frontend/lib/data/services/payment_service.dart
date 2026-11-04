@@ -43,4 +43,17 @@ class PaymentService {
     } catch (_) {}
     return [];
   }
+
+  static Future<bool> checkDepositStatus(int bookingId) async {
+    try {
+      final response = await ApiClient.get(ApiEndpoints.checkPaymentStatus(bookingId));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        if (data['success'] == true && data['data'] != null) {
+          return data['data']['is_paid'] == true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
 }

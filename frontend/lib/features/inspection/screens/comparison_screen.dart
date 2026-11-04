@@ -86,7 +86,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
 
   Future<void> _handleConfirm() async {
     final checkoutId = _comparison?.checkOut?.id ?? _comparison?.checkIn?.id;
-    if (checkoutId == null || checkoutId == 0) {
+    if (_comparison?.checkOut == null && _comparison?.checkIn == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Chưa có biên bản hoàn trả để ký xác nhận.'),
@@ -95,11 +95,12 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
       );
       return;
     }
+    final targetId = _comparison?.checkOut?.id ?? _comparison?.checkIn?.id ?? 0;
 
     setState(() => _isConfirming = true);
 
     try {
-      final ok = await InspectionService.confirmInspection(checkoutId);
+      final ok = await InspectionService.confirmInspection(targetId);
       if (!mounted) return;
 
       if (ok) {
@@ -791,6 +792,29 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
       );
     }
 
+    if (comp.checkOut == null) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.orange.shade50,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.orange.shade200),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.hourglass_top_rounded, color: Colors.orange.shade800),
+            const SizedBox(width: 8),
+            Text(
+              'CHỜ KHÁCH THUÊ GỬI BIÊN BẢN TRẢ XE',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.orange.shade800),
+            ),
+          ],
+        ),
+      );
+    }
+
     return ElevatedButton.icon(
       onPressed: _isConfirming ? null : _handleConfirm,
       style: ElevatedButton.styleFrom(
@@ -808,7 +832,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
             )
           : const Icon(Icons.verified_rounded),
       label: const Text(
-        'XÁC NHẬN BÀN GIAO & HOÀN CỌC',
+        'DUYỆT BIÊN BẢN TRẢ XE & HOÀN CỌC',
         style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 0.5),
       ),
     );

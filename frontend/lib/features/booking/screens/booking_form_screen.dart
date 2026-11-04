@@ -25,6 +25,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
   late final TextEditingController _pickupController;
   late final TextEditingController _returnController;
   bool _isLoading = false;
+  bool _agreedToTerms = false;
 
   final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
 
@@ -98,6 +99,17 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
 
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (!_agreedToTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng tích đồng ý với quy định cọc và chính sách thuê xe trước khi đặt!'),
+          backgroundColor: AppColors.danger,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -223,6 +235,8 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
 
               // 5. Bảng Tạm tính Chi phí Thời gian thực
               _buildPriceBreakdownCard(v),
+              const SizedBox(height: 16),
+              _buildTermsAgreementCard(),
               const SizedBox(height: 24),
 
               // 6. Nút tiếp tục thanh toán cọc
@@ -649,6 +663,55 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.danger),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTermsAgreementCard() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: _agreedToTerms ? AppColors.primary : AppColors.border,
+          width: _agreedToTerms ? 1.5 : 1.0,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Checkbox(
+            value: _agreedToTerms,
+            activeColor: AppColors.primary,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            onChanged: (val) => setState(() => _agreedToTerms = val ?? false),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _agreedToTerms = !_agreedToTerms),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: RichText(
+                  text: const TextSpan(
+                    style: TextStyle(fontSize: 12, color: AppColors.textPrimary, height: 1.4),
+                    children: [
+                      TextSpan(text: 'Tôi đã đọc và đồng ý với '),
+                      TextSpan(
+                        text: 'Quy chế đặt cọc (30%) & Chính sách thuê xe',
+                        style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+                      ),
+                      TextSpan(
+                        text: ' của AutoRental. (Bắt buộc để gửi yêu cầu đặt xe).',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ],
