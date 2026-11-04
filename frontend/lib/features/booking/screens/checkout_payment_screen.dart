@@ -13,14 +13,36 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class CheckoutPaymentScreen extends StatefulWidget {
   final BookingModel booking;
+  final String paymentType; // 'DEPOSIT' hoặc 'REMAINING'
+  final double? customAmount;
+  final String? title;
 
-  const CheckoutPaymentScreen({super.key, required this.booking});
+  const CheckoutPaymentScreen({
+    super.key,
+    required this.booking,
+    this.paymentType = 'DEPOSIT',
+    this.customAmount,
+    this.title,
+  });
 
   @override
   State<CheckoutPaymentScreen> createState() => _CheckoutPaymentScreenState();
 }
 
 class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
+  bool get _isDeposit => widget.paymentType == 'DEPOSIT';
+  double get _targetAmount {
+    if (widget.customAmount != null && widget.customAmount! > 0) {
+      return widget.customAmount!;
+    }
+    if (_isDeposit) {
+      return widget.booking.depositAmount;
+    } else {
+      final rem = widget.booking.totalPrice - widget.booking.depositAmount;
+      return rem > 0 ? rem : widget.booking.totalPrice * 0.7;
+    }
+  }
+
   String _selectedPaymentMethod = 'BANK_TRANSFER_QR'; // BANK_TRANSFER_QR, VNPAY_MOCK, CASH
   bool _agreedToTerms = false;
   bool _hasTransferred = false;
@@ -48,7 +70,9 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
 
   Future<void> _checkPaymentRealtime({bool showManualNotice = false}) async {
     if (_isProcessing) return;
-    final isPaid = await PaymentService.checkDepositStatus(widget.booking.id);
+    final isPaid = _isDeposit
+        ? await PaymentService.checkDepositStatus(widget.booking.id)
+        : await PaymentService.checkRemainingStatus(widget.booking.id);
     if (!mounted) return;
     if (isPaid) {
       _pollTimer?.cancel();
@@ -77,11 +101,12 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
   Future<void> _recordDepositPaid() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final list = prefs.getStringList('paid_deposit_bookings') ?? [];
+      final key = _isDeposit ? 'paid_deposit_bookings' : 'paid_remaining_bookings';
+      final list = prefs.getStringList(key) ?? [];
       final idStr = widget.booking.id.toString();
       if (!list.contains(idStr)) {
         list.add(idStr);
-        await prefs.setStringList('paid_deposit_bookings', list);
+        await prefs.setStringList(key, list);
       }
     } catch (_) {}
   }
@@ -169,8 +194,8 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
     try {
       final result = await PaymentService.processCheckout(
         bookingId: widget.booking.id,
-        amount: widget.booking.depositAmount,
-        paymentType: 'DEPOSIT',
+        amount: _targetAmount,
+        paymentType: widget.paymentType,
         paymentMethod: _selectedPaymentMethod,
       );
 
@@ -318,7 +343,7 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Hóa Đơn & Đặt Cọc'),
+        title: Text(widget.title ?? (_isDeposit ? 'Hóa Đơn & Đặt Cọc' : 'Thanh Toán Tiền Còn Lại')),
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -360,12 +385,12 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
                     )
                   : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.verified_user_rounded, size: 20),
-                        SizedBox(width: 8),
+                      children: [
+                        const Icon(Icons.verified_user_rounded, size: 20),
+                        const SizedBox(width: 8),
                         Text(
-                          'XÁC NHẬN ĐÃ THANH TOÁN CỌC',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                          _isDeposit ? 'XÁC NHẬN ĐÃ THANH TOÁN CỌC' : 'XÁC NHẬN ĐÃ THANH TOÁN TIỀN CÒN LẠI',
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 0.5),
                         ),
                       ],
                     ),
@@ -525,20 +550,20 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
               children: [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     Text(
-                      'TIỀN CỌC CẦN THANH TOÁN (30%)',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.danger),
+                      _isDeposit ? 'TIỀN CỌC CẦN THANH TOÁN (30%)' : 'TIỀN THUÊ CÒN LẠI CẦN THANH TOÁN (70%)',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.danger),
                     ),
-                    SizedBox(height: 2),
+                    const SizedBox(height: 2),
                     Text(
-                      'Thanh toán ngay để giữ xe',
-                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                      _isDeposit ? 'Thanh toán ngay để giữ xe' : 'Thanh toán khi nhận bàn giao xe',
+                      style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                     ),
                   ],
                 ),
                 Text(
-                  CurrencyFormatter.format(b.depositAmount),
+                  CurrencyFormatter.format(_targetAmount),
                   style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.danger),
                 ),
               ],
@@ -704,7 +729,7 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
               children: [
                 QrImageView(
                   data: VietQrGenerator.generateVietQrPayload(
-                    amount: widget.booking.depositAmount,
+                    amount: _targetAmount,
                     memo: 'AUTORENTAL BK${widget.booking.id}',
                   ),
                   version: QrVersions.auto,

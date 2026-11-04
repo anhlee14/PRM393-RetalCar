@@ -6,7 +6,7 @@ class PaymentService {
   static Future<Map<String, dynamic>> processCheckout({
     required int bookingId,
     required double amount,
-    String paymentType = 'DEPOSIT', // DEPOSIT, FINAL_PAYMENT
+    String paymentType = 'DEPOSIT', // DEPOSIT, REMAINING, FINAL_PAYMENT
     required String paymentMethod, // CASH, BANK_TRANSFER_QR, VNPAY_MOCK
   }) async {
     try {
@@ -50,10 +50,33 @@ class PaymentService {
       if (response.statusCode == 200) {
         final data = jsonDecode(utf8.decode(response.bodyBytes));
         if (data['success'] == true && data['data'] != null) {
-          return data['data']['is_paid'] == true;
+          return data['data']['is_deposit_paid'] == true || data['data']['is_paid'] == true;
         }
       }
     } catch (_) {}
     return false;
+  }
+
+  static Future<Map<String, bool>> checkPaymentStatusDetailed(int bookingId) async {
+    try {
+      final response = await ApiClient.get(ApiEndpoints.checkPaymentStatus(bookingId));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        if (data['success'] == true && data['data'] != null) {
+          final isDep = data['data']['is_deposit_paid'] ?? data['data']['is_paid'] ?? false;
+          final isRem = data['data']['is_remaining_paid'] ?? false;
+          return {
+            'is_deposit_paid': isDep == true,
+            'is_remaining_paid': isRem == true,
+          };
+        }
+      }
+    } catch (_) {}
+    return {'is_deposit_paid': false, 'is_remaining_paid': false};
+  }
+
+  static Future<bool> checkRemainingStatus(int bookingId) async {
+    final status = await checkPaymentStatusDetailed(bookingId);
+    return status['is_remaining_paid'] == true;
   }
 }

@@ -44,10 +44,15 @@ public class PaymentController {
         return ResponseEntity.ok(ApiResponse.success("Ghi nhận biến động số dư thành công", payment));
     }
 
-    // Kiểm tra trạng thái cọc theo thời gian thực (Polling real-time từ mobile app)
+    // Kiểm tra trạng thái cọc & tiền còn lại theo thời gian thực (Polling real-time từ mobile app)
     @GetMapping("/check-status/{bookingId}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> checkPaymentStatus(@PathVariable Long bookingId) {
-        boolean isPaid = paymentService.isBookingDepositPaid(bookingId);
-        return ResponseEntity.ok(ApiResponse.success("Kiểm tra trạng thái thanh toán", Map.of("is_paid", isPaid)));
+        boolean isDepositPaid = paymentService.isBookingDepositPaid(bookingId);
+        boolean isRemainingPaid = paymentService.isBookingRemainingPaid(bookingId);
+        return ResponseEntity.ok(ApiResponse.success("Kiểm tra trạng thái thanh toán", Map.of(
+                "is_paid", isDepositPaid,
+                "is_deposit_paid", isDepositPaid,
+                "is_remaining_paid", isRemainingPaid
+        )));
     }
 }
