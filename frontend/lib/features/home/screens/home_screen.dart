@@ -134,10 +134,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (ctx) => const OwnerVehicleListScreen()),
-                      ).then((_) => _fetchUser());
+                      if (_currentUser == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Vui lòng đăng nhập để quản lý xe của bạn!'),
+                            backgroundColor: AppColors.primary,
+                          ),
+                        );
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (ctx) => const LoginScreen()),
+                        ).then((_) => _fetchUser());
+                      } else {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (ctx) => const OwnerVehicleListScreen()),
+                        ).then((_) => _fetchUser());
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
@@ -259,10 +272,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   'Chủ xe',
                   Colors.orange,
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (ctx) => const OwnerVehicleListScreen()),
-                    ).then((_) => _fetchUser());
+                    if (_currentUser == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Vui lòng đăng nhập để vào chức năng chủ xe!'),
+                          backgroundColor: AppColors.primary,
+                        ),
+                      );
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (ctx) => const LoginScreen()),
+                      ).then((_) => _fetchUser());
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (ctx) => const OwnerVehicleListScreen()),
+                      ).then((_) => _fetchUser());
+                    }
                   },
                 ),
               ],

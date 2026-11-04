@@ -7,8 +7,16 @@ import lombok.Data;
 @Data
 public class GoogleLoginRequest {
 
-    @NotBlank(message = "Google ID Token không được để trống")
+    @NotBlank(message = "Google Token không được để trống")
     @JsonAlias({"idToken", "id_token"})
     private String idToken;
-}
 
+    @JsonAlias({"email"})
+    private String email;
+
+    @JsonAlias({"fullName", "full_name", "name"})
+    private String fullName;
+
+    @JsonAlias({"avatarUrl", "avatar_url", "picture"})
+    private String avatarUrl;
+}

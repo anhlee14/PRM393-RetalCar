@@ -37,7 +37,7 @@ class AuthService {
   static Future<Map<String, dynamic>> loginWithGoogle() async {
     try {
       final googleSignIn = GoogleSignIn(
-        serverClientId: ApiEndpoints.googleWebClientId,
+        serverClientId: kIsWeb ? null : ApiEndpoints.googleWebClientId,
         clientId: kIsWeb ? ApiEndpoints.googleWebClientId : null,
         scopes: ['email', 'profile'],
       );
@@ -48,27 +48,36 @@ class AuthService {
       }
 
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final idToken = googleAuth.idToken;
+      final idToken = googleAuth.idToken ?? googleAuth.accessToken;
 
       if (idToken == null || idToken.isEmpty) {
         return {'success': false, 'message': 'Không thể lấy ID Token từ Google. Vui lòng thử lại.'};
       }
 
+      debugPrint('[Google Auth] Lấy token thành công, gửi sang Backend: ${ApiEndpoints.googleLogin}');
       final response = await ApiClient.post(
         ApiEndpoints.googleLogin,
-        body: {'id_token': idToken},
+        body: {
+          'id_token': idToken,
+          'email': googleUser.email,
+          'full_name': googleUser.displayName,
+          'avatar_url': googleUser.photoUrl,
+        },
       );
 
+      debugPrint('[Google Auth] Backend HTTP status: ${response.statusCode}, body: ${response.body}');
       final data = jsonDecode(utf8.decode(response.bodyBytes));
       if (response.statusCode == 200 && data['success'] == true) {
         final token = data['data']['token'];
         final refreshToken = data['data']['refresh_token'];
         await ApiClient.saveTokens(accessToken: token, refreshToken: refreshToken);
+        debugPrint('[Google Auth] Đăng nhập hệ thống AutoRental thành công!');
         return {'success': true, 'data': data['data']};
       } else {
         return {'success': false, 'message': data['message'] ?? 'Đăng nhập Google thất bại'};
       }
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('[Google Auth] Lỗi ngoại lệ: $e\n$stack');
       return {'success': false, 'message': 'Lỗi đăng nhập Google: $e'};
     }
   }

@@ -36,6 +36,11 @@ public class BookingService {
             throw new BadRequestException("Xe hiện không sẵn sàng cho thuê");
         }
 
+        // Nghiệp vụ: Chủ xe không được tự thuê xe do chính mình sở hữu
+        if (vehicle.getOwner() != null && vehicle.getOwner().getId().equals(renter.getId())) {
+            throw new BadRequestException("Chủ xe không thể tự thuê xe do chính mình sở hữu");
+        }
+
         // Tính số ngày thuê (tối thiểu 1 ngày)
         long days = ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate());
         if (days <= 0) days = 1;
@@ -137,4 +142,3 @@ public class BookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt xe với ID: " + id));
     }
 }
-

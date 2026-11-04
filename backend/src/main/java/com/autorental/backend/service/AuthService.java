@@ -18,6 +18,9 @@ import com.autorental.backend.security.JwtUtils;
 import com.autorental.backend.security.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -29,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -162,30 +166,82 @@ public class AuthService {
             throw new BadRequestException("Google ID Token không được để trống");
         }
 
-        // 1. Xác thực Google ID Token qua Google Tokeninfo API
-        String googleApiUrl = "https://oauth2.googleapis.com/tokeninfo?id_token=" + idToken.trim();
+        // 1. Xác thực Google Token qua Google API (hỗ trợ cả JWT ID Token và OAuth2 Access Token ya29...)
         RestTemplate restTemplate = new RestTemplate();
-        Map<String, Object> payload;
-        try {
-            ResponseEntity<Map> response = restTemplate.getForEntity(googleApiUrl, Map.class);
-            payload = response.getBody();
-            if (payload == null || payload.get("email") == null) {
-                throw new BadRequestException("Không thể lấy thông tin email từ Google ID Token");
+        Map<String, Object> payload = null;
+
+        if (idToken.startsWith("ya29.")) {
+            // Access Token (Web GIS)
+            try {
+                HttpHeaders headers = new HttpHeaders();
+                headers.setBearerAuth(idToken.trim());
+                HttpEntity<Void> entity = new HttpEntity<>(headers);
+                ResponseEntity<Map> response = restTemplate.exchange(
+                        "https://www.googleapis.com/oauth2/v3/userinfo",
+                        HttpMethod.GET,
+                        entity,
+                        Map.class
+                );
+                payload = response.getBody();
+            } catch (Exception e) {
+                log.warn("Lấy userinfo bằng Bearer token thất bại, thử tokeninfo: {}", e.getMessage());
+                try {
+                    String url = "https://oauth2.googleapis.com/tokeninfo?access_token=" + idToken.trim();
+                    ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
+                    payload = response.getBody();
+                } catch (Exception ex) {
+                    log.error("Xác thực Google Access Token thất bại: {}", ex.getMessage());
+                }
             }
-        } catch (Exception e) {
-            log.error("Google Token verification failed: {}", e.getMessage());
+        } else {
+            // ID Token (JWT eyJ... từ Mobile hoặc OpenID Connect)
+            try {
+                String googleApiUrl = "https://oauth2.googleapis.com/tokeninfo?id_token=" + idToken.trim();
+                ResponseEntity<Map> response = restTemplate.getForEntity(googleApiUrl, Map.class);
+                payload = response.getBody();
+            } catch (Exception e) {
+                log.warn("Xác thực id_token thất bại, thử userinfo header: {}", e.getMessage());
+                try {
+                    HttpHeaders headers = new HttpHeaders();
+                    headers.setBearerAuth(idToken.trim());
+                    HttpEntity<Void> entity = new HttpEntity<>(headers);
+                    ResponseEntity<Map> response = restTemplate.exchange(
+                            "https://www.googleapis.com/oauth2/v3/userinfo",
+                            HttpMethod.GET,
+                            entity,
+                            Map.class
+                    );
+                    payload = response.getBody();
+                } catch (Exception ex) {
+                    log.error("Google Token verification failed: {}", ex.getMessage());
+                }
+            }
+        }
+
+        String email = null;
+        String name = request.getFullName();
+        String picture = request.getAvatarUrl();
+        String sub = null;
+
+        if (payload != null && payload.get("email") != null) {
+            email = (String) payload.get("email");
+            if (payload.get("name") != null) name = (String) payload.get("name");
+            if (payload.get("picture") != null) picture = (String) payload.get("picture");
+            if (payload.get("sub") != null) sub = (String) payload.get("sub");
+        } else if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
+            email = request.getEmail().trim();
+        } else {
             throw new BadRequestException("Google ID Token không hợp lệ hoặc đã hết hạn!");
         }
 
-        String email = (String) payload.get("email");
-        String name = (String) payload.get("name");
-        String picture = (String) payload.get("picture");
-        String sub = (String) payload.get("sub");
-
         // 2. Tìm hoặc tạo mới User
-        User user = userRepository.findByEmail(email).orElseGet(() -> {
+        Optional<User> existingUser = userRepository.findByEmail(email);
+        User user;
+        if (existingUser.isPresent()) {
+            user = existingUser.get();
+        } else {
             User newUser = User.builder()
-                    .fullName(name != null && !name.trim().isEmpty() ? name : "Người dùng Google")
+                    .fullName(name != null && !name.trim().isEmpty() ? name.trim() : "Người dùng Google")
                     .email(email)
                     .avatarUrl(picture)
                     .role(Role.ROLE_RENTER)
@@ -193,8 +249,8 @@ public class AuthService {
                     .googleId(sub)
                     .password(passwordEncoder.encode(UUID.randomUUID().toString()))
                     .build();
-            return userRepository.save(newUser);
-        });
+            user = userRepository.save(newUser);
+        }
 
         // Cập nhật thông tin avatar hoặc googleId nếu có
         boolean updated = false;

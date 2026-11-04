@@ -4,6 +4,8 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/vehicle_image_helper.dart';
 import '../../../data/models/vehicle_model.dart';
 import '../../../data/services/vehicle_service.dart';
+import '../../../data/models/user_model.dart';
+import '../../../data/services/auth_service.dart';
 import '../widgets/matching_filter_sheet.dart';
 import 'vehicle_detail_screen.dart';
 import '../../gps_tracking/screens/notifications_screen.dart';
@@ -18,6 +20,8 @@ class ExploreScreen extends StatefulWidget {
 
 class _ExploreScreenState extends State<ExploreScreen> {
   final TextEditingController _searchController = TextEditingController();
+
+  UserModel? _currentUser;
 
   // Danh sách xe đã nạp
   List<VehicleMatchModel> _allMatches = [];
@@ -64,6 +68,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
     });
 
     try {
+      final user = await AuthService.getCurrentUser();
+      if (mounted) {
+        _currentUser = user;
+      }
       final results = await VehicleService.searchMatchingVehicles(
         budget: _budget,
         needDriver: _needDriver,
@@ -673,15 +681,39 @@ class _ExploreScreenState extends State<ExploreScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                v.name,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textPrimary,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      v.name,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (_currentUser != null && v.ownerId == _currentUser!.id)
+                                    Container(
+                                      margin: const EdgeInsets.only(left: 6),
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber.shade100,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: Colors.amber.shade700),
+                                      ),
+                                      child: Text(
+                                        'Xe của bạn',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.amber.shade900,
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                               const SizedBox(height: 2),
                               Text(

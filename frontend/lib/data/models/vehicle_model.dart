@@ -22,6 +22,8 @@ class VehicleModel {
   final int totalReviews;
   final String status;
   final String? thumbnailUrl;
+  final int? ownerId;
+  final String? ownerName;
 
   VehicleModel({
     required this.id,
@@ -44,9 +46,23 @@ class VehicleModel {
     this.totalReviews = 0,
     required this.status,
     this.thumbnailUrl,
+    this.ownerId,
+    this.ownerName,
   });
 
   factory VehicleModel.fromJson(Map<String, dynamic> json) {
+    int? parsedOwnerId;
+    String? parsedOwnerName;
+    if (json['owner'] != null && json['owner'] is Map) {
+      final ownerMap = json['owner'] as Map;
+      parsedOwnerId = (ownerMap['id'] as num?)?.toInt();
+      parsedOwnerName = ownerMap['full_name'] ?? ownerMap['fullName'];
+    } else if (json['owner_id'] != null) {
+      parsedOwnerId = (json['owner_id'] as num?)?.toInt();
+    } else if (json['ownerId'] != null) {
+      parsedOwnerId = (json['ownerId'] as num?)?.toInt();
+    }
+
     return VehicleModel(
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
@@ -68,6 +84,8 @@ class VehicleModel {
       totalReviews: json['total_reviews'] ?? 0,
       status: json['status'] ?? 'AVAILABLE',
       thumbnailUrl: json['thumbnail_url'],
+      ownerId: parsedOwnerId,
+      ownerName: parsedOwnerName,
     );
   }
 }
@@ -99,4 +117,3 @@ class VehicleMatchModel {
     );
   }
 }
-

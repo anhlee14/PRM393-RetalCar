@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/vehicle_image_helper.dart';
+import '../../../data/models/user_model.dart';
 import '../../../data/models/vehicle_model.dart';
+import '../../../data/services/auth_service.dart';
+import '../../../data/services/vehicle_service.dart';
+import '../../auth/screens/login_screen.dart';
+import '../../vehicle_management/screens/edit_vehicle_screen.dart';
 
 class VehicleDetailScreen extends StatefulWidget {
   final VehicleModel vehicle;
@@ -22,10 +27,44 @@ class VehicleDetailScreen extends StatefulWidget {
 
 class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
   int _activeImageIndex = 0;
+  late VehicleModel _vehicle;
+  UserModel? _currentUser;
+  bool _isLoadingUser = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _vehicle = widget.vehicle;
+    _loadUserAndDetail();
+  }
+
+  Future<void> _loadUserAndDetail() async {
+    final user = await AuthService.getCurrentUser();
+    VehicleModel? detail;
+    if (_vehicle.ownerId == null && _vehicle.id > 0) {
+      detail = await VehicleService.getVehicleById(_vehicle.id);
+    }
+    if (!mounted) return;
+    setState(() {
+      _currentUser = user;
+      if (detail != null) {
+        _vehicle = detail;
+      }
+      _isLoadingUser = false;
+    });
+  }
+
+  bool get _isVehicleOwner {
+    if (_currentUser == null) return false;
+    if (_vehicle.ownerId != null) {
+      return _currentUser!.id == _vehicle.ownerId;
+    }
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final v = widget.vehicle;
+    final v = _vehicle;
     final images = VehicleImageHelper.getGalleryImages(v);
 
     return Scaffold(
@@ -152,6 +191,47 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Cảnh báo chủ xe không thể tự thuê xe của mình
+                  if (_isVehicleOwner)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.amber.shade400, width: 1.2),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.shield_outlined, color: Colors.amber.shade900, size: 24),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Xe do bạn sở hữu',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: Colors.amber.shade900,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Hệ thống không cho phép chủ xe tự đặt thuê chiếc xe của chính mình.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.amber.shade900,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
                   // Title and Rating
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -428,25 +508,62 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
               Expanded(
                 child: SizedBox(
                   height: 50,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      elevation: 2,
-                    ),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Đang kết nối đơn đặt xe cho ${v.name} (Chức năng Người 2)...'),
-                          backgroundColor: AppColors.primary,
+                  child: _isVehicleOwner
+                      ? ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber.shade800,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            elevation: 2,
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (ctx) => EditVehicleScreen(vehicle: _vehicle),
+                              ),
+                            ).then((_) => _loadUserAndDetail());
+                          },
+                          icon: const Icon(Icons.edit, size: 18),
+                          label: const Text(
+                            'CHỈNH SỬA XE CỦA BẠN',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                        )
+                      : ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            elevation: 2,
+                          ),
+                          onPressed: () {
+                            if (_currentUser == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Vui lòng đăng nhập để đặt thuê xe!'),
+                                  backgroundColor: AppColors.primary,
+                                ),
+                              );
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (ctx) => const LoginScreen()),
+                              ).then((_) => _loadUserAndDetail());
+                              return;
+                            }
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Đang kết nối đơn đặt xe cho ${v.name} (Chức năng Người 2)...'),
+                                backgroundColor: AppColors.primary,
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            'ĐẶT XE NGAY',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
                         ),
-                      );
-                    },
-                    child: const Text(
-                      'ĐẶT XE NGAY',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                  ),
                 ),
               ),
             ],

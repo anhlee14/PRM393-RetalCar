@@ -3,6 +3,8 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/services/file_upload_service.dart';
 import '../../../data/services/vehicle_service.dart';
+import '../../../data/services/auth_service.dart';
+import '../../auth/screens/login_screen.dart';
 
 class AddVehicleScreen extends StatefulWidget {
   const AddVehicleScreen({super.key});
@@ -50,6 +52,33 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _checkAuth();
+  }
+
+  void _checkAuth() async {
+    final user = await AuthService.getCurrentUser();
+    if (!mounted) return;
+    if (user == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Vui lòng đăng nhập để đăng tải xe cho thuê!'),
+              backgroundColor: AppColors.primary,
+            ),
+          );
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (ctx) => const LoginScreen()),
+          );
+        }
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _licensePlateController.dispose();
@@ -63,6 +92,19 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   }
 
   void _handleSubmit() async {
+    final user = await AuthService.getCurrentUser();
+    if (user == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng đăng nhập để đăng xe!'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      Navigator.push(context, MaterialPageRoute(builder: (ctx) => const LoginScreen()));
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) return;
 
     final basePrice = double.tryParse(_priceController.text.trim());
