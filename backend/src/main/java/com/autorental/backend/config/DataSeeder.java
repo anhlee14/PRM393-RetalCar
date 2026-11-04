@@ -1,6 +1,8 @@
 package com.autorental.backend.config;
 
 import com.autorental.backend.model.*;
+import com.autorental.backend.repository.BookingRepository;
+import com.autorental.backend.repository.GpsLogRepository;
 import com.autorental.backend.repository.UserRepository;
 import com.autorental.backend.repository.VehicleRepository;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
@@ -19,6 +22,8 @@ public class DataSeeder implements CommandLineRunner {
 
         private final UserRepository userRepository;
         private final VehicleRepository vehicleRepository;
+        private final BookingRepository bookingRepository;
+        private final GpsLogRepository gpsLogRepository;
         private final PasswordEncoder passwordEncoder;
 
         @Override
@@ -137,6 +142,59 @@ public class DataSeeder implements CommandLineRunner {
                         vehicleRepository.saveAll(List.of(v1, v2, v3));
 
                         log.info("Khởi tạo dữ liệu mẫu thành công! Tài khoản test: owner@gmail.com / 123456 và renter@gmail.com / 123456");
+                }
+
+                // 3. Khởi tạo 1 chuyến đi ONGOING mẫu kèm lộ trình GPS thực tế nếu chưa có đơn thuê nào
+                if (bookingRepository.count() == 0) {
+                        User renter = userRepository.findByEmail("renter@gmail.com").orElse(null);
+                        List<Vehicle> vehicles = vehicleRepository.findAll();
+                        if (renter != null && !vehicles.isEmpty()) {
+                                Vehicle vehicle = vehicles.get(0);
+                                Booking ongoingBooking = Booking.builder()
+                                                .renter(renter)
+                                                .vehicle(vehicle)
+                                                .startDate(LocalDateTime.now().minusHours(2))
+                                                .endDate(LocalDateTime.now().plusDays(2))
+                                                .withDriver(false)
+                                                .carRentalPrice(BigDecimal.valueOf(2400000))
+                                                .driverServicePrice(BigDecimal.ZERO)
+                                                .totalPrice(BigDecimal.valueOf(2400000))
+                                                .depositAmount(BigDecimal.valueOf(720000))
+                                                .pickupAddress("Cầu Giấy, Hà Nội")
+                                                .returnAddress("Hồ Hoàn Kiếm, Hà Nội")
+                                                .status(BookingStatus.ONGOING)
+                                                .lastRenterGpsPing(LocalDateTime.now().minusMinutes(12))
+                                                .build();
+                                Booking savedBooking = bookingRepository.save(ongoingBooking);
+
+                                // Tạo 4 điểm lộ trình GPS dọc theo trục Cầu Giấy -> Kim Mã -> Láng Hạ -> Hồ Gươm
+                                GpsLog p1 = GpsLog.builder()
+                                                .booking(savedBooking)
+                                                .latitude(21.0333)
+                                                .longitude(105.7833)
+                                                .speed(35.0)
+                                                .build();
+                                GpsLog p2 = GpsLog.builder()
+                                                .booking(savedBooking)
+                                                .latitude(21.0308)
+                                                .longitude(105.8125)
+                                                .speed(42.5)
+                                                .build();
+                                GpsLog p3 = GpsLog.builder()
+                                                .booking(savedBooking)
+                                                .latitude(21.0245)
+                                                .longitude(105.8252)
+                                                .speed(38.0)
+                                                .build();
+                                GpsLog p4 = GpsLog.builder()
+                                                .booking(savedBooking)
+                                                .latitude(21.0285)
+                                                .longitude(105.8542)
+                                                .speed(45.0)
+                                                .build();
+                                gpsLogRepository.saveAll(List.of(p1, p2, p3, p4));
+                                log.info("Đã khởi tạo chuyến xe ONGOING mẫu #BK-{} kèm 4 điểm lộ trình GPS!", savedBooking.getId());
+                        }
                 }
         }
 }

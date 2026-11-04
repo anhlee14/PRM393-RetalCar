@@ -7,6 +7,7 @@ import '../../../data/models/booking_model.dart';
 import '../../../data/models/vehicle_model.dart';
 import '../../../data/services/booking_service.dart';
 import '../../gps_tracking/screens/renter_route_map_screen.dart';
+import '../../gps_tracking/screens/owner_snapshot_screen.dart';
 import '../../inspection/screens/photo_inspection_screen.dart';
 import '../../inspection/screens/comparison_screen.dart';
 import 'checkout_payment_screen.dart';
@@ -706,11 +707,15 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => RenterRouteMapScreen(bookingId: b.id)),
+              MaterialPageRoute(
+                builder: (_) => _isOwner
+                    ? OwnerSnapshotScreen(bookingId: b.id, initialStatus: b.status, initialVehicleName: b.vehicle?.name)
+                    : RenterRouteMapScreen(bookingId: b.id, initialStatus: b.status, initialVehicleName: b.vehicle?.name),
+              ),
             );
           },
-          icon: const Icon(Icons.map_rounded, size: 16),
-          label: const Text('Lộ trình GPS', style: TextStyle(fontSize: 12)),
+          icon: Icon(_isOwner ? Icons.radar_rounded : Icons.map_rounded, size: 16),
+          label: Text(_isOwner ? 'Định vị Snapshot (Chủ xe)' : 'Lộ trình GPS & Ping', style: const TextStyle(fontSize: 12)),
           style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.primary,
             side: const BorderSide(color: AppColors.primary),

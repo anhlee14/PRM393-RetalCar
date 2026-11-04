@@ -23,10 +23,11 @@ public class GpsController {
     private final GpsService gpsService;
     private final AuthService authService;
 
-    // Feature 2: Người thuê gửi toạ độ GPS (Bắt buộc tối đa 1 tiếng / lần)
+    // Feature 2: Người thuê gửi toạ độ GPS (Bắt buộc tối đa 1 tiếng / lần khi đơn đang ONGOING)
     @PostMapping("/ping")
     public ResponseEntity<ApiResponse<GpsLog>> pingGps(@Valid @RequestBody GpsPingRequest request) {
-        GpsLog log = gpsService.recordPing(request);
+        User currentUser = authService.getCurrentUser();
+        GpsLog log = gpsService.recordPing(request, currentUser);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật toạ độ GPS thành công", log));
     }
 
@@ -38,7 +39,7 @@ public class GpsController {
         return ResponseEntity.ok(ApiResponse.success("Lấy toàn bộ lộ trình xe thành công", route));
     }
 
-    // Feature 2: Chủ xe chỉ xem Snapshot toạ độ tức thời + Giới hạn 20 lần / ngày
+    // Feature 2: Chủ xe chỉ xem Snapshot toạ độ tức thời + Giới hạn 20 lần / ngày (-1 lượt mỗi khi gọi)
     @GetMapping("/owner-snapshot/{bookingId}")
     public ResponseEntity<ApiResponse<GpsSnapshotResponse>> getOwnerSnapshot(@PathVariable Long bookingId) {
         User owner = authService.getCurrentUser();
@@ -46,11 +47,10 @@ public class GpsController {
         return ResponseEntity.ok(ApiResponse.success("Lấy vị trí hiện tại của xe thành công", snapshot));
     }
 
-    // Feature 2: Kiểm tra tình trạng bật GPS (có quá 60 phút không)
+    // Feature 2: Kiểm tra tình trạng bật GPS (có quá 60 phút không) & số lượt Quota còn lại (không trừ lượt)
     @GetMapping("/status/{bookingId}")
     public ResponseEntity<ApiResponse<GpsStatusResponse>> checkGpsStatus(@PathVariable Long bookingId) {
         GpsStatusResponse status = gpsService.checkGpsStatus(bookingId);
         return ResponseEntity.ok(ApiResponse.success("Kiểm tra trạng thái GPS thành công", status));
     }
 }
-

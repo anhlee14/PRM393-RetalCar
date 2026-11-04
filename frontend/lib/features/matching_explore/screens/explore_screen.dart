@@ -10,6 +10,8 @@ import '../widgets/matching_filter_sheet.dart';
 import 'vehicle_detail_screen.dart';
 import '../../gps_tracking/screens/notifications_screen.dart';
 import '../../gps_tracking/screens/renter_route_map_screen.dart';
+import '../../gps_tracking/screens/owner_snapshot_screen.dart';
+import '../../../data/services/booking_service.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -178,6 +180,44 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
+  Future<void> _openActiveBookingGps() async {
+    final isOwner = _currentUser?.role == 'ROLE_OWNER';
+    int targetId = 1;
+    String? targetStatus;
+    String? targetVehicleName;
+
+    try {
+      final list = isOwner
+          ? await BookingService.getOwnerBookings()
+          : await BookingService.getRenterBookings();
+      if (list.isNotEmpty) {
+        final ongoing = list.where((b) => b.status.toUpperCase() == 'ONGOING').toList();
+        final chosen = ongoing.isNotEmpty ? ongoing.first : list.first;
+        targetId = chosen.id;
+        targetStatus = chosen.status;
+        targetVehicleName = chosen.vehicle?.name;
+      }
+    } catch (_) {}
+
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => isOwner
+            ? OwnerSnapshotScreen(
+                bookingId: targetId,
+                initialStatus: targetStatus,
+                initialVehicleName: targetVehicleName,
+              )
+            : RenterRouteMapScreen(
+                bookingId: targetId,
+                initialStatus: targetStatus,
+                initialVehicleName: targetVehicleName,
+              ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -212,13 +252,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.map_outlined),
-            tooltip: 'Định vị GPS xe',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const RenterRouteMapScreen(bookingId: 1)),
-              );
-            },
+            tooltip: 'Định vị GPS chuyến xe đang chạy',
+            onPressed: _openActiveBookingGps,
           ),
           IconButton(
             icon: const Icon(Icons.notifications_none_rounded),

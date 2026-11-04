@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/notification_model.dart';
+import '../../../data/models/user_model.dart';
+import '../../../data/services/auth_service.dart';
 import '../../../data/services/notification_service.dart';
 import 'renter_route_map_screen.dart';
 import 'owner_snapshot_screen.dart';
@@ -16,6 +18,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   List<NotificationModel> _notifications = [];
   bool _isLoading = true;
   int _unreadCount = 0;
+  UserModel? _currentUser;
+
+  bool get _isOwner => _currentUser?.role == 'ROLE_OWNER';
 
   @override
   void initState() {
@@ -25,15 +30,35 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Future<void> _fetchNotifications() async {
     setState(() => _isLoading = true);
+    final user = await AuthService.getCurrentUser();
     final list = await NotificationService.getNotifications();
     final count = await NotificationService.getUnreadCount();
 
     if (mounted) {
       setState(() {
+        _currentUser = user;
         _notifications = list;
         _unreadCount = count;
         _isLoading = false;
       });
+    }
+  }
+
+  void _openGpsForRole(int bookingId) {
+    if (_isOwner) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => OwnerSnapshotScreen(bookingId: bookingId),
+        ),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RenterRouteMapScreen(bookingId: bookingId),
+        ),
+      );
     }
   }
 
@@ -59,7 +84,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     if (!mounted) return;
 
-    // Hiển thị BottomSheet chi tiết thông báo
+    final targetBookingId = noti.referenceId ?? 1;
+
+    // Hiển thị BottomSheet chi tiết thông báo theo đúng vai trò người dùng
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -98,15 +125,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 child: ElevatedButton.icon(
                   onPressed: () {
                     Navigator.pop(ctx);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => RenterRouteMapScreen(bookingId: noti.referenceId ?? 1),
-                      ),
-                    );
+                    _openGpsForRole(targetBookingId);
                   },
-                  icon: const Icon(Icons.my_location),
-                  label: const Text('MỞ BẢN ĐỒ & GỬI GPS NGAY'),
+                  icon: Icon(_isOwner ? Icons.radar_rounded : Icons.my_location),
+                  label: Text(
+                    _isOwner
+                        ? 'KIỂM TRA SNAPSHOT VỊ TRÍ XE #BK-$targetBookingId'
+                        : 'MỞ BẢN ĐỒ & PING GPS NGAY (#BK-$targetBookingId)',
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.danger,
                     foregroundColor: Colors.white,
@@ -115,44 +141,25 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ),
               )
             else if (noti.referenceId != null)
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => RenterRouteMapScreen(bookingId: noti.referenceId!),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.map_outlined),
-                      label: const Text('Lộ Trình Khách'),
-                    ),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _openGpsForRole(noti.referenceId!);
+                  },
+                  icon: Icon(_isOwner ? Icons.shield_outlined : Icons.map_outlined),
+                  label: Text(
+                    _isOwner
+                        ? 'Xem Định vị Snapshot Xe (#BK-${noti.referenceId})'
+                        : 'Xem Lộ Trình GPS Chuyến Xe (#BK-${noti.referenceId})',
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => OwnerSnapshotScreen(bookingId: noti.referenceId!),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.shield_outlined),
-                      label: const Text('Snapshot Xe'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                ],
+                ),
               ),
           ],
         ),
@@ -168,31 +175,31 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     switch (type) {
       case 'GPS_WARNING':
-        bg = AppColors.danger.withOpacity(0.12);
+        bg = AppColors.danger.withValues(alpha: 0.12);
         fg = AppColors.danger;
         label = 'Cảnh báo GPS';
         icon = Icons.warning_amber_rounded;
         break;
       case 'BOOKING_STATUS':
-        bg = AppColors.primary.withOpacity(0.12);
+        bg = AppColors.primary.withValues(alpha: 0.12);
         fg = AppColors.primary;
         label = 'Đơn thuê xe';
         icon = Icons.assignment_outlined;
         break;
       case 'INSPECTION_UPDATE':
-        bg = Colors.teal.withOpacity(0.12);
+        bg = Colors.teal.withValues(alpha: 0.12);
         fg = Colors.teal;
         label = 'Bàn giao xe';
         icon = Icons.camera_alt_outlined;
         break;
       case 'PAYMENT_UPDATE':
-        bg = AppColors.success.withOpacity(0.12);
+        bg = AppColors.success.withValues(alpha: 0.12);
         fg = AppColors.success;
         label = 'Thanh toán';
         icon = Icons.account_balance_wallet_outlined;
         break;
       default:
-        bg = Colors.grey.withOpacity(0.12);
+        bg = Colors.grey.withValues(alpha: 0.12);
         fg = Colors.grey.shade800;
         label = 'Hệ thống';
         icon = Icons.notifications_outlined;
@@ -291,17 +298,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: noti.isRead ? Colors.white : (isGpsWarning ? Colors.red.shade50 : Colors.blue.shade50.withOpacity(0.5)),
+          color: noti.isRead
+              ? Colors.white
+              : (isGpsWarning ? Colors.red.shade50 : Colors.blue.shade50.withValues(alpha: 0.5)),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isGpsWarning
-                ? AppColors.danger.withOpacity(0.5)
-                : (noti.isRead ? AppColors.border : AppColors.primary.withOpacity(0.3)),
+                ? AppColors.danger.withValues(alpha: 0.5)
+                : (noti.isRead ? AppColors.border : AppColors.primary.withValues(alpha: 0.3)),
             width: isGpsWarning ? 1.5 : 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 8,
               offset: const Offset(0, 2),
             )
@@ -315,12 +324,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: isGpsWarning
-                    ? AppColors.danger.withOpacity(0.15)
+                    ? AppColors.danger.withValues(alpha: 0.15)
                     : (noti.type == 'PAYMENT_UPDATE'
-                        ? AppColors.success.withOpacity(0.15)
+                        ? AppColors.success.withValues(alpha: 0.15)
                         : (noti.type == 'INSPECTION_UPDATE'
-                            ? Colors.teal.withOpacity(0.15)
-                            : AppColors.primary.withOpacity(0.15))),
+                            ? Colors.teal.withValues(alpha: 0.15)
+                            : AppColors.primary.withValues(alpha: 0.15))),
               ),
               child: Icon(
                 isGpsWarning
