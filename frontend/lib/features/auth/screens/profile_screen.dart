@@ -6,6 +6,7 @@ import '../../../data/models/user_model.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/file_upload_service.dart';
 import '../../vehicle_management/screens/owner_vehicle_list_screen.dart';
+import '../../booking/screens/booking_history_screen.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -422,6 +423,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (ctx) => const OwnerVehicleListScreen()),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Mục Duyệt đơn thuê xe của khách (Chức năng Chủ xe)
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: BorderSide(color: AppColors.success.withAlpha(80), width: 1.2),
+              ),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                leading: const CircleAvatar(
+                  radius: 22,
+                  backgroundColor: AppColors.success,
+                  child: Icon(Icons.assignment_turned_in, color: Colors.white),
+                ),
+                title: const Text(
+                  'Duyệt đơn thuê xe của khách',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                subtitle: const Text(
+                  'Xem các yêu cầu đặt xe từ khách thuê & bấm Duyệt đơn',
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.success),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (ctx) => const BookingHistoryScreen()),
                   );
                 },
               ),

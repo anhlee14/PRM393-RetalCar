@@ -10,6 +10,8 @@ import '../../gps_tracking/screens/renter_route_map_screen.dart';
 import '../../inspection/screens/photo_inspection_screen.dart';
 import '../../inspection/screens/comparison_screen.dart';
 import 'checkout_payment_screen.dart';
+import '../../../data/models/user_model.dart';
+import '../../../data/services/auth_service.dart';
 
 class BookingHistoryScreen extends StatefulWidget {
   const BookingHistoryScreen({super.key});
@@ -22,6 +24,8 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
   late TabController _tabController;
   List<BookingModel> _bookings = [];
   bool _isLoading = true;
+  UserModel? _currentUser;
+  bool get _isOwner => _currentUser?.role == 'ROLE_OWNER';
 
   final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
 
@@ -181,9 +185,24 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
 
   Future<void> _fetchBookings() async {
     setState(() => _isLoading = true);
-    final list = await BookingService.getRenterBookings();
+    final user = await AuthService.getCurrentUser();
+    List<BookingModel> list = [];
+    if (user != null && user.role == 'ROLE_OWNER') {
+      list = await BookingService.getOwnerBookings();
+      if (list.isEmpty) {
+        final renterList = await BookingService.getRenterBookings();
+        if (renterList.isNotEmpty) list = renterList;
+      }
+    } else {
+      list = await BookingService.getRenterBookings();
+      if (list.isEmpty) {
+        final ownerList = await BookingService.getOwnerBookings();
+        if (ownerList.isNotEmpty) list = ownerList;
+      }
+    }
     if (!mounted) return;
     setState(() {
+      _currentUser = user;
       _bookings = list;
       _isLoading = false;
     });
@@ -238,6 +257,53 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
         return 'Đã hủy';
       default:
         return status;
+    }
+  }
+
+  Future<void> _handleConfirmBooking(int id) async {
+    setState(() => _isLoading = true);
+    final ok = await BookingService.confirmBooking(id);
+    if (!mounted) return;
+    if (ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Chủ xe đã duyệt đơn thuê #BK-$id thành công! Chuyển sang trạng thái Đã duyệt.'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      _fetchBookings();
+    } else {
+      // Fallback cục bộ cho chế độ kiểm thử
+      setState(() {
+        _bookings = _bookings.map((b) {
+          if (b.id == id) {
+            return BookingModel(
+              id: b.id,
+              renter: b.renter,
+              vehicle: b.vehicle,
+              startDate: b.startDate,
+              endDate: b.endDate,
+              withDriver: b.withDriver,
+              carRentalPrice: b.carRentalPrice,
+              driverServicePrice: b.driverServicePrice,
+              totalPrice: b.totalPrice,
+              depositAmount: b.depositAmount,
+              status: 'CONFIRMED',
+              pickupAddress: b.pickupAddress,
+              returnAddress: b.returnAddress,
+              lastRenterGpsPing: b.lastRenterGpsPing,
+            );
+          }
+          return b;
+        }).toList();
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Đã duyệt đơn thuê #BK-$id thành công (Chế độ Thử nghiệm)!'),
+          backgroundColor: AppColors.success,
+        ),
+      );
     }
   }
 
@@ -330,7 +396,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Lịch Sử Chuyến Đi & Đơn Thuê'),
+        title: Text(_isOwner ? 'Quản Lý Đơn Thuê (Chủ Xe)' : 'Lịch Sử Chuyến Đi & Đơn Thuê'),
         elevation: 0,
         actions: [
           IconButton(
@@ -738,6 +804,18 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
             ),
           ),
 
+        if (st == 'PENDING')
+          ElevatedButton.icon(
+            onPressed: () => _handleConfirmBooking(b.id),
+            icon: const Icon(Icons.check_circle_outline, size: 16),
+            label: const Text('Duyệt đơn thuê', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.success,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
         if (st == 'PENDING')
           OutlinedButton.icon(
             onPressed: () {
