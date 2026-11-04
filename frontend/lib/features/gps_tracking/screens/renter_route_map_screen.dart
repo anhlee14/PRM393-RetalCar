@@ -82,7 +82,7 @@ class _RenterRouteMapScreenState extends State<RenterRouteMapScreen> {
     if (enabled) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('🛰️ Đã bật Tự động đồng bộ GPS (Auto-Ping mỗi 8 giây trong chế độ Demo).'),
+          content: Text('Đã bật Tự động đồng bộ GPS (Auto-Ping mỗi 8 giây trong chế độ Demo).'),
           backgroundColor: AppColors.primary,
         ),
       );
@@ -294,7 +294,7 @@ class _RenterRouteMapScreenState extends State<RenterRouteMapScreen> {
             ),
             SizedBox(height: 12),
             Text(
-              '• Giới hạn đối với Chủ xe (Owner):',
+              'Giới hạn đối với Chủ xe (Owner):',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             ),
             SizedBox(height: 4),
@@ -623,48 +623,12 @@ class _RenterRouteMapScreenState extends State<RenterRouteMapScreen> {
       ),
       child: Column(
         children: [
-          // Banner quyền riêng tư
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.lock_outline, size: 16, color: AppColors.primary),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    'Quyền riêng tư GDPR: Chỉ khách thuê mới xem được toàn bộ lộ trình này',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Text(
-                    'FULL ROUTE',
-                    style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
           // Canvas vẽ mô phỏng bản đồ tương tác
           SizedBox(
             height: 260,
             width: double.infinity,
             child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+              borderRadius: BorderRadius.circular(20),
               child: CustomPaint(
                 painter: RouteMapPainter(routeLogs: _routeLogs),
                 child: Stack(
