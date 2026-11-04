@@ -17,8 +17,13 @@ class ApiEndpoints {
     }
   }
 
+  // Google OAuth Client ID
+  static const String googleWebClientId =
+      '983143606511-pc4cgo3077is1bujc48p50gbd2n22lff.apps.googleusercontent.com';
+
   // Auth & Profile
   static String get login => '$baseUrl/api/auth/login';
+  static String get googleLogin => '$baseUrl/api/auth/google';
   static String get register => '$baseUrl/api/auth/register';
   static String get refreshToken => '$baseUrl/api/auth/refresh';
   static String get switchRole => '$baseUrl/api/auth/switch-role';

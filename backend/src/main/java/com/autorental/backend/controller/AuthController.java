@@ -1,5 +1,6 @@
 package com.autorental.backend.controller;
 
+import com.autorental.backend.dto.request.GoogleLoginRequest;
 import com.autorental.backend.dto.request.LoginRequest;
 import com.autorental.backend.dto.request.RefreshTokenRequest;
 import com.autorental.backend.dto.request.RegisterRequest;
@@ -32,6 +33,12 @@ public class AuthController {
     public ResponseEntity<ApiResponse<JwtResponse>> login(@Valid @RequestBody LoginRequest request) {
         JwtResponse jwtResponse = authService.login(request);
         return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công", jwtResponse));
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<ApiResponse<JwtResponse>> loginWithGoogle(@Valid @RequestBody GoogleLoginRequest request) {
+        JwtResponse jwtResponse = authService.loginWithGoogle(request);
+        return ResponseEntity.ok(ApiResponse.success("Đăng nhập Google thành công", jwtResponse));
     }
 
     @PostMapping("/refresh")
