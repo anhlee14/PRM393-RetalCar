@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/inspection_model.dart';
 import '../../../data/services/inspection_service.dart';
+import '../../../data/services/booking_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ComparisonScreen extends StatefulWidget {
   final int bookingId;
@@ -84,6 +86,19 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
     });
   }
 
+  
+  Future<void> _recordTripCompleted() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList('completed_bookings') ?? [];
+      final idStr = widget.bookingId.toString();
+      if (!list.contains(idStr)) {
+        list.add(idStr);
+        await prefs.setStringList('completed_bookings', list);
+      }
+    } catch (_) {}
+  }
+
   Future<void> _handleConfirm() async {
     final checkoutId = _comparison?.checkOut?.id ?? _comparison?.checkIn?.id;
     if (_comparison?.checkOut == null && _comparison?.checkIn == null) {
@@ -104,6 +119,8 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
       if (!mounted) return;
 
       if (ok) {
+        await _recordTripCompleted();
+        await BookingService.completeBooking(widget.bookingId);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Xác nhận biên bản bàn giao thành công!'),
@@ -111,6 +128,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
           ),
         );
         _fetchComparison();
+        Navigator.pop(context, true);
       } else {
         // Fallback cho chế độ thử nghiệm
         setState(() {
@@ -151,6 +169,9 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
             backgroundColor: AppColors.success,
           ),
         );
+        await _recordTripCompleted();
+        await BookingService.completeBooking(widget.bookingId);
+        Navigator.pop(context, true);
       }
     } finally {
       if (mounted) setState(() => _isConfirming = false);

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/services/inspection_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PhotoInspectionScreen extends StatefulWidget {
   final int bookingId;
@@ -195,6 +196,20 @@ class _PhotoInspectionScreenState extends State<PhotoInspectionScreen> {
     }
   }
 
+  
+  Future<void> _recordInspectionSaved() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = _isCheckIn ? 'checked_in_bookings' : 'checked_out_bookings';
+      final list = prefs.getStringList(key) ?? [];
+      final idStr = widget.bookingId.toString();
+      if (!list.contains(idStr)) {
+        list.add(idStr);
+        await prefs.setStringList(key, list);
+      }
+    } catch (_) {}
+  }
+
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -237,6 +252,7 @@ class _PhotoInspectionScreenState extends State<PhotoInspectionScreen> {
       if (!mounted) return;
 
       if (result['success'] == true) {
+        await _recordInspectionSaved();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -274,7 +290,8 @@ class _PhotoInspectionScreenState extends State<PhotoInspectionScreen> {
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                 ),
-                onPressed: () {
+                onPressed: () async {
+                  await _recordInspectionSaved();
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
