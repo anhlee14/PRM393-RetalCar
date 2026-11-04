@@ -5,6 +5,7 @@ class ApiEndpoints {
   // - Web (Chrome, Edge): 'http://localhost:8080'
   // - Android Emulator: 'http://10.0.2.2:8080'
   // - iOS Simulator / Desktop (Windows, macOS): 'http://localhost:8080'
+  // - Thiết bị thật: thay bằng IP LAN máy chủ
   static String get baseUrl {
     if (kIsWeb) {
       return 'http://localhost:8080';

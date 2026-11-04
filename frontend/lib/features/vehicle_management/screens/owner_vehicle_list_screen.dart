@@ -9,6 +9,7 @@ import '../../../data/services/vehicle_service.dart';
 import '../../auth/screens/login_screen.dart';
 import 'add_vehicle_screen.dart';
 import 'edit_vehicle_screen.dart';
+import '../../booking/screens/booking_history_screen.dart';
 
 class OwnerVehicleListScreen extends StatefulWidget {
   const OwnerVehicleListScreen({super.key});
@@ -291,6 +292,69 @@ class _OwnerVehicleListScreenState extends State<OwnerVehicleListScreen> {
   }
 
   @override
+  Widget _buildPendingOrdersBanner() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.success.withAlpha(120), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.success.withAlpha(20),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.success.withAlpha(30),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.assignment_turned_in, color: AppColors.success, size: 24),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Yêu Cầu Thuê Xe Cần Duyệt',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Xem đơn khách đặt xe & duyệt đơn',
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const BookingHistoryScreen()),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.success,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Xem & Duyệt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
@@ -311,6 +375,16 @@ class _OwnerVehicleListScreenState extends State<OwnerVehicleListScreen> {
         title: const Text('Quản Lý Xe Của Tôi'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.assignment_turned_in_outlined),
+            tooltip: 'Duyệt đơn thuê của khách',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const BookingHistoryScreen()),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Làm mới',
             onPressed: _fetchVehicles,
@@ -320,12 +394,19 @@ class _OwnerVehicleListScreenState extends State<OwnerVehicleListScreen> {
       body: RefreshIndicator(
         onRefresh: _fetchVehicles,
         child: _vehicles.isEmpty
-            ? _buildEmptyState()
+            ? ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                children: [
+                  _buildPendingOrdersBanner(),
+                  _buildEmptyState(),
+                ],
+              )
             : ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                itemCount: _vehicles.length,
+                itemCount: _vehicles.length + 1,
                 itemBuilder: (ctx, index) {
-                  final v = _vehicles[index];
+                  if (index == 0) return _buildPendingOrdersBanner();
+                  final v = _vehicles[index - 1];
                   return Card(
                     margin: const EdgeInsets.only(bottom: 14),
                     elevation: 2,
@@ -338,7 +419,9 @@ class _OwnerVehicleListScreenState extends State<OwnerVehicleListScreen> {
                         Stack(
                           children: [
                             Image.network(
-                              (v.thumbnailUrl != null && v.thumbnailUrl!.isNotEmpty) ? ApiEndpoints.resolveImageUrl(v.thumbnailUrl!) : 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341',
+                              (v.thumbnailUrl != null && v.thumbnailUrl!.isNotEmpty)
+                                  ? ApiEndpoints.resolveImageUrl(v.thumbnailUrl!)
+                                  : 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341',
                               height: 160,
                               width: double.infinity,
                               fit: BoxFit.cover,

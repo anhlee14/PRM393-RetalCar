@@ -12,6 +12,7 @@ import '../../auth/screens/profile_screen.dart';
 import '../../vehicle_management/screens/admin_vehicle_approval_screen.dart';
 import '../../vehicle_management/screens/owner_vehicle_list_screen.dart';
 import '../../matching_explore/screens/explore_screen.dart';
+import '../../booking/screens/booking_history_screen.dart';
 import '../../gps_tracking/screens/notifications_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -693,47 +694,6 @@ const SizedBox(width: 12),
     );
   }
 
-  Widget _buildMyBookingsStub() {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Xe Đã Thuê Của Tôi')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.deepPurple.shade50,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.receipt_long_rounded, size: 64, color: Colors.deepPurple),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Lịch Sử Chuyến Đi & Đơn Thuê',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Quản lý đơn thuê xe, duyệt đơn & thanh toán tiền cọc',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-              ),
-              const SizedBox(height: 24),
-              OutlinedButton.icon(
-                onPressed: () => setState(() => _currentNavIndex = 0),
-                icon: const Icon(Icons.arrow_back),
-                label: const Text('Quay lại Trang chủ'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildSelectedBody() {
     switch (_currentNavIndex) {
       case 0:
@@ -741,7 +701,8 @@ const SizedBox(width: 12),
       case 1:
         return const ExploreScreen(); // Tab 2: Khám phá xe & Matching %
       case 2:
-        return _buildMyBookingsStub();  // Tab 3: Xe đã thuê / Đơn thuê
+        return const BookingHistoryScreen(); // Tab 3: Xe đã thuê / Đơn thuê
+
       case 3:
       default:
         return const ProfileScreen(); // Tab 4: Tài khoản cá nhân

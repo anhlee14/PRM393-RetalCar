@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../constants/api_endpoints.dart';
 
 class ApiClient {
   static Future<String?> getToken() async {
@@ -72,5 +73,27 @@ class ApiClient {
   static Future<http.Response> delete(String url) async {
     final headers = await _getHeaders();
     return await http.delete(Uri.parse(url), headers: headers).timeout(_timeout);
+  }
+
+  static Future<String?> uploadFile(List<int> bytes, String filename, {String folder = 'inspections'}) async {
+    try {
+      final token = await getToken();
+      final uri = Uri.parse(ApiEndpoints.uploadFile);
+      final request = http.MultipartRequest('POST', uri);
+      if (token != null && token.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+      request.fields['folder'] = folder;
+      request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
+      final streamed = await request.send().timeout(const Duration(seconds: 20));
+      final res = await http.Response.fromStream(streamed);
+      if (res.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(res.bodyBytes));
+        if (data['success'] == true && data['data'] != null) {
+          return data['data']['file_url'];
+        }
+      }
+    } catch (_) {}
+    return null;
   }
 }

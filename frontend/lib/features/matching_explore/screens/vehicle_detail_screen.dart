@@ -7,6 +7,7 @@ import '../../../data/models/vehicle_model.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/vehicle_service.dart';
 import '../../auth/screens/login_screen.dart';
+import '../../booking/screens/booking_form_screen.dart';
 import '../../vehicle_management/screens/edit_vehicle_screen.dart';
 
 class VehicleDetailScreen extends StatefulWidget {
@@ -552,12 +553,12 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                               return;
                             }
 
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Đang kết nối đơn đặt xe cho ${v.name} (Chức năng Người 2)...'),
-                                backgroundColor: AppColors.primary,
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => BookingFormScreen(vehicle: _vehicle),
                               ),
-                            );
+                            ).then((_) => _loadUserAndDetail());
                           },
                           child: const Text(
                             'ĐẶT XE NGAY',

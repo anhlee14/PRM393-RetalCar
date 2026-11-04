@@ -37,23 +37,31 @@ class BookingModel {
     this.lastRenterGpsPing,
   });
 
+  DateTime? get parsedStartDate => DateTime.tryParse(startDate);
+  DateTime? get parsedEndDate => DateTime.tryParse(endDate);
+
+  int get rentalDays {
+    if (parsedStartDate == null || parsedEndDate == null) return 1;
+    final diff = parsedEndDate!.difference(parsedStartDate!).inDays;
+    return diff <= 0 ? 1 : diff;
+  }
+
   factory BookingModel.fromJson(Map<String, dynamic> json) {
     return BookingModel(
       id: json['id'] ?? 0,
       renter: json['renter'] != null ? UserModel.fromJson(json['renter']) : null,
       vehicle: json['vehicle'] != null ? VehicleModel.fromJson(json['vehicle']) : null,
-      startDate: json['start_date'] ?? '',
-      endDate: json['end_date'] ?? '',
-      withDriver: json['with_driver'] ?? false,
-      carRentalPrice: (json['car_rental_price'] as num?)?.toDouble() ?? 0.0,
-      driverServicePrice: (json['driver_service_price'] as num?)?.toDouble() ?? 0.0,
-      totalPrice: (json['total_price'] as num?)?.toDouble() ?? 0.0,
-      depositAmount: (json['deposit_amount'] as num?)?.toDouble() ?? 0.0,
+      startDate: json['start_date'] ?? json['startDate'] ?? '',
+      endDate: json['end_date'] ?? json['endDate'] ?? '',
+      withDriver: json['with_driver'] ?? json['withDriver'] ?? false,
+      carRentalPrice: (json['car_rental_price'] ?? json['carRentalPrice'] as num?)?.toDouble() ?? 0.0,
+      driverServicePrice: (json['driver_service_price'] ?? json['driverServicePrice'] as num?)?.toDouble() ?? 0.0,
+      totalPrice: (json['total_price'] ?? json['totalPrice'] as num?)?.toDouble() ?? 0.0,
+      depositAmount: (json['deposit_amount'] ?? json['depositAmount'] as num?)?.toDouble() ?? 0.0,
       status: json['status'] ?? 'PENDING',
-      pickupAddress: json['pickup_address'],
-      returnAddress: json['return_address'],
-      lastRenterGpsPing: json['last_renter_gps_ping'],
+      pickupAddress: json['pickup_address'] ?? json['pickupAddress'],
+      returnAddress: json['return_address'] ?? json['returnAddress'],
+      lastRenterGpsPing: json['last_renter_gps_ping'] ?? json['lastRenterGpsPing'],
     );
   }
 }
-
