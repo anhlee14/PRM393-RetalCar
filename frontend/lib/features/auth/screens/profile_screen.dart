@@ -311,7 +311,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              'SĐT: ${_user!.phone}',
+              'SĐT: ${_user!.phone.isEmpty ? 'Chưa cập nhật' : _user!.phone}',
               style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
             const SizedBox(height: 20),

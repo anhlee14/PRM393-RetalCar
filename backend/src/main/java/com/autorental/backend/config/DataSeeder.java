@@ -49,7 +49,17 @@ public class DataSeeder implements CommandLineRunner {
                     .avatarUrl("https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d")
                     .build();
 
-            userRepository.saveAll(List.of(owner1, renter1));
+            User admin1 = User.builder()
+                    .fullName("Quản Trị Viên AutoRental")
+                    .email("admin@gmail.com")
+                    .phone("0999888999")
+                    .password(passwordEncoder.encode("123456"))
+                    .role(Role.ROLE_ADMIN)
+                    .cccdNumber("001202009999")
+                    .avatarUrl("https://images.unsplash.com/photo-1472099645785-5658abf4ff4e")
+                    .build();
+
+            userRepository.saveAll(List.of(owner1, renter1, admin1));
 
             // 2. Tạo Xe mẫu (có toạ độ quanh Hà Nội / ĐH FPT Hòa Lạc)
             Vehicle v1 = Vehicle.builder()

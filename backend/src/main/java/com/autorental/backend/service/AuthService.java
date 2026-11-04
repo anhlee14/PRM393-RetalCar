@@ -1,5 +1,6 @@
 package com.autorental.backend.service;
 
+import com.autorental.backend.dto.request.GoogleLoginRequest;
 import com.autorental.backend.dto.request.LoginRequest;
 import com.autorental.backend.dto.request.RefreshTokenRequest;
 import com.autorental.backend.dto.request.RegisterRequest;
@@ -16,6 +17,8 @@ import com.autorental.backend.repository.UserRepository;
 import com.autorental.backend.security.JwtUtils;
 import com.autorental.backend.security.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -23,8 +26,13 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.Map;
+import java.util.UUID;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class AuthService {
 
@@ -145,5 +153,76 @@ public class AuthService {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         return userRepository.findById(userDetails.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng hiện tại"));
+    }
+
+    @Transactional
+    public JwtResponse loginWithGoogle(GoogleLoginRequest request) {
+        String idToken = request.getIdToken();
+        if (idToken == null || idToken.trim().isEmpty()) {
+            throw new BadRequestException("Google ID Token không được để trống");
+        }
+
+        // 1. Xác thực Google ID Token qua Google Tokeninfo API
+        String googleApiUrl = "https://oauth2.googleapis.com/tokeninfo?id_token=" + idToken.trim();
+        RestTemplate restTemplate = new RestTemplate();
+        Map<String, Object> payload;
+        try {
+            ResponseEntity<Map> response = restTemplate.getForEntity(googleApiUrl, Map.class);
+            payload = response.getBody();
+            if (payload == null || payload.get("email") == null) {
+                throw new BadRequestException("Không thể lấy thông tin email từ Google ID Token");
+            }
+        } catch (Exception e) {
+            log.error("Google Token verification failed: {}", e.getMessage());
+            throw new BadRequestException("Google ID Token không hợp lệ hoặc đã hết hạn!");
+        }
+
+        String email = (String) payload.get("email");
+        String name = (String) payload.get("name");
+        String picture = (String) payload.get("picture");
+        String sub = (String) payload.get("sub");
+
+        // 2. Tìm hoặc tạo mới User
+        User user = userRepository.findByEmail(email).orElseGet(() -> {
+            User newUser = User.builder()
+                    .fullName(name != null && !name.trim().isEmpty() ? name : "Người dùng Google")
+                    .email(email)
+                    .avatarUrl(picture)
+                    .role(Role.ROLE_RENTER)
+                    .authProvider("GOOGLE")
+                    .googleId(sub)
+                    .password(passwordEncoder.encode(UUID.randomUUID().toString()))
+                    .build();
+            return userRepository.save(newUser);
+        });
+
+        // Cập nhật thông tin avatar hoặc googleId nếu có
+        boolean updated = false;
+        if (user.getAvatarUrl() == null && picture != null) {
+            user.setAvatarUrl(picture);
+            updated = true;
+        }
+        if (user.getGoogleId() == null && sub != null) {
+            user.setGoogleId(sub);
+            updated = true;
+        }
+        if (updated) {
+            userRepository.save(user);
+        }
+
+        // 3. Tạo JWT Token & Refresh Token của AutoRental
+        String jwt = jwtUtils.generateTokenFromUser(user);
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
+
+        return JwtResponse.builder()
+                .token(jwt)
+                .refreshToken(refreshToken.getToken())
+                .id(user.getId())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .role(user.getRole().name())
+                .avatarUrl(user.getAvatarUrl())
+                .build();
     }
 }

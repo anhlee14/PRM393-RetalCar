@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/network/api_client.dart';
 import '../models/user_model.dart';
@@ -26,6 +28,45 @@ class AuthService {
       }
     } catch (e) {
       return {'success': false, 'message': 'Lỗi kết nối máy chủ: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> loginWithGoogle() async {
+    try {
+      final googleSignIn = GoogleSignIn(
+        serverClientId: ApiEndpoints.googleWebClientId,
+        clientId: kIsWeb ? ApiEndpoints.googleWebClientId : null,
+        scopes: ['email', 'profile'],
+      );
+
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        return {'success': false, 'message': 'Đã hủy đăng nhập Google'};
+      }
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final idToken = googleAuth.idToken;
+
+      if (idToken == null || idToken.isEmpty) {
+        return {'success': false, 'message': 'Không thể lấy ID Token từ Google. Vui lòng thử lại.'};
+      }
+
+      final response = await ApiClient.post(
+        ApiEndpoints.googleLogin,
+        body: {'id_token': idToken},
+      );
+
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (response.statusCode == 200 && data['success'] == true) {
+        final token = data['data']['token'];
+        final refreshToken = data['data']['refresh_token'];
+        await ApiClient.saveTokens(accessToken: token, refreshToken: refreshToken);
+        return {'success': true, 'data': data['data']};
+      } else {
+        return {'success': false, 'message': data['message'] ?? 'Đăng nhập Google thất bại'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi đăng nhập Google: $e'};
     }
   }
 

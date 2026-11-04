@@ -1,4 +1,4 @@
-# PHÂN HỆ: ĐẶT XE, THANH TOÁN CỌC & LỊCH SỬ CHUYẾN ĐI (BOOKING & CHECKOUT)
+ĐẶT XE, THANH TOÁN CỌC & LỊCH SỬ CHUYẾN ĐI (BOOKING & CHECKOUT)
 **Người phụ trách:** 👤 **Thành viên 2**  
 **Môn học:** PRM393 - Mobile Application Development (FPT University)  
 **Kiến trúc:** Feature-First Clean Architecture
