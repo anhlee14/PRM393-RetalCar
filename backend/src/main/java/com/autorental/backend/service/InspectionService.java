@@ -53,8 +53,12 @@ public class InspectionService {
 
         // Gửi thông báo cho bên còn lại
         String stageLabel = request.getStage() == InspectionStage.CHECK_IN ? "bàn giao ban đầu" : "hoàn trả xe";
+        User recipient = request.getStage() == InspectionStage.CHECK_IN 
+                ? booking.getRenter() 
+                : booking.getVehicle().getOwner();
+
         notificationService.createNotification(
-                booking.getRenter(),
+                recipient,
                 "Cập nhật ảnh thẩm định xe",
                 "Đã có ảnh hiện trạng xe lúc " + stageLabel + ". Vui lòng kiểm tra và bấm xác nhận.",
                 NotificationType.INSPECTION_UPDATE,
@@ -128,4 +132,3 @@ public class InspectionService {
                 .build();
     }
 }
-

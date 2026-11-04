@@ -3,6 +3,8 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/vehicle_image_helper.dart';
 import '../../../data/models/vehicle_model.dart';
+import '../../../data/models/user_model.dart';
+import '../../../data/services/auth_service.dart';
 import '../../booking/screens/booking_form_screen.dart';
 
 class VehicleDetailScreen extends StatefulWidget {
@@ -23,6 +25,20 @@ class VehicleDetailScreen extends StatefulWidget {
 
 class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
   int _activeImageIndex = 0;
+  UserModel? _currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentUser();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    final user = await AuthService.getCurrentUser();
+    if (mounted && user != null) {
+      setState(() => _currentUser = user);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -426,29 +442,58 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                 ],
               ),
               const SizedBox(width: 20),
-              Expanded(
-                child: SizedBox(
-                  height: 50,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      elevation: 2,
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => BookingFormScreen(vehicle: v),
+              Builder(
+                builder: (context) {
+                  final bool isMyVehicle = _currentUser != null &&
+                      ((v.ownerId != null && v.ownerId == _currentUser!.id) ||
+                       (v.owner?.id != null && v.owner!.id == _currentUser!.id));
+                  final bool isAvailable = v.status.toUpperCase() == 'AVAILABLE';
+
+                  String buttonLabel = 'ĐẶT XE NGAY';
+                  VoidCallback? onButtonPressed = () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => BookingFormScreen(vehicle: v),
+                      ),
+                    );
+                  };
+                  Color buttonBgColor = AppColors.primary;
+
+                  if (isMyVehicle) {
+                    buttonLabel = 'XE CỦA BẠN';
+                    onButtonPressed = null;
+                    buttonBgColor = Colors.grey.shade400;
+                  } else if (!isAvailable) {
+                    if (v.status.toUpperCase() == 'RENTED') {
+                      buttonLabel = 'XE ĐANG ĐƯỢC THUÊ';
+                    } else if (v.status.toUpperCase() == 'MAINTENANCE') {
+                      buttonLabel = 'XE ĐANG BẢO DƯỠNG';
+                    } else {
+                      buttonLabel = 'XE CHƯA SẴN SÀNG';
+                    }
+                    onButtonPressed = null;
+                    buttonBgColor = Colors.grey.shade400;
+                  }
+
+                  return Expanded(
+                    child: SizedBox(
+                      height: 50,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: buttonBgColor,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 2,
                         ),
-                      );
-                    },
-                    child: const Text(
-                      'ĐẶT XE NGAY',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                        onPressed: onButtonPressed,
+                        child: Text(
+                          buttonLabel,
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
             ],
           ),

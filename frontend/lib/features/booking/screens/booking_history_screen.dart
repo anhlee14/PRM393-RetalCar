@@ -7,6 +7,7 @@ import '../../../data/models/booking_model.dart';
 import '../../../data/models/vehicle_model.dart';
 import '../../../data/services/booking_service.dart';
 import '../../gps_tracking/screens/renter_route_map_screen.dart';
+import '../../gps_tracking/screens/owner_snapshot_screen.dart';
 import '../../inspection/screens/photo_inspection_screen.dart';
 import '../../inspection/screens/comparison_screen.dart';
 import 'checkout_payment_screen.dart';
@@ -864,23 +865,41 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
       runSpacing: 8,
       children: [
         // 1. NÚT LỘ TRÌNH GPS & PING: Chỉ hiện khi chuyến đi đang diễn ra (ONGOING)
+        // Chủ xe chỉ xem Snapshot vị trí tức thời (tuân thủ quyền riêng tư), Khách thuê xem Full lộ trình & Ping GPS
         if (st == 'ONGOING')
-          OutlinedButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => RenterRouteMapScreen(bookingId: b.id)),
-              );
-            },
-            icon: const Icon(Icons.location_on_rounded, size: 16),
-            label: const Text('Lộ trình GPS & Ping', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primary,
-              side: const BorderSide(color: AppColors.primary),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-          ),
+          canApproveBooking
+              ? OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => OwnerSnapshotScreen(bookingId: b.id)),
+                    );
+                  },
+                  icon: const Icon(Icons.my_location_rounded, size: 16),
+                  label: const Text('Định vị xe (Snapshot)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                )
+              : OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => RenterRouteMapScreen(bookingId: b.id)),
+                    );
+                  },
+                  icon: const Icon(Icons.location_on_rounded, size: 16),
+                  label: const Text('Lộ trình GPS & Ping', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
 
         // ==================== A. TRẠNG THÁI PENDING ====================
         // CHỦ XE: "đã chuyển cọc mới hiện duyệt đơn bên người cho thuê"

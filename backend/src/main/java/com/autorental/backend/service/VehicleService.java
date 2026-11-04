@@ -124,6 +124,13 @@ public class VehicleService {
             throw new BadRequestException("Không thể xóa xe vì xe đang có chuyến đi hoạt động!");
         }
 
+        if (bookingRepository.existsByVehicleId(vehicleId)) {
+            // Xe đã có lịch sử chuyến đi, chuyển trạng thái MAINTENANCE để bảo toàn toàn vẹn dữ liệu
+            vehicle.setStatus(VehicleStatus.MAINTENANCE);
+            vehicleRepository.save(vehicle);
+            return;
+        }
+
         vehicleRepository.delete(vehicle);
     }
 

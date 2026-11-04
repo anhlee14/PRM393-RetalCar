@@ -9,6 +9,7 @@ import 'package:car_rental_app/features/booking/screens/booking_history_screen.d
 import 'package:car_rental_app/features/inspection/screens/photo_inspection_screen.dart';
 import 'package:car_rental_app/features/inspection/screens/comparison_screen.dart';
 import 'package:car_rental_app/features/inspection/screens/checkin_review_screen.dart';
+import 'package:car_rental_app/features/matching_explore/screens/vehicle_detail_screen.dart';
 
 void main() {
   group('1. BookingModel Unit Tests', () {
@@ -284,5 +285,86 @@ void main() {
       expect(find.text('Biên Bản Nhận Xe (Chủ Xe Giao)'), findsOneWidget);
     });
   });
-}
 
+
+  group('9. VehicleModel & DetailScreen Business Logic Tests', () {
+    test('Parse VehicleModel with owner information correctly', () {
+      final json = {
+        'id': 10,
+        'name': 'Toyota Camry 2.5Q',
+        'brand': 'Toyota',
+        'license_plate': '30F-123.45',
+        'vehicle_type': 'SEDAN',
+        'transmission': 'AUTO',
+        'fuel_type': 'PETROL',
+        'base_price_per_day': 1100000.0,
+        'has_driver_option': false,
+        'driver_fee_per_day': 0.0,
+        'status': 'RENTED',
+        'owner': {
+          'id': 5,
+          'full_name': 'Nguyễn Văn Chủ Xe',
+          'email': 'owner@gmail.com',
+          'phone': '0912345678',
+          'role': 'ROLE_OWNER'
+        }
+      };
+
+      final vehicle = VehicleModel.fromJson(json);
+      expect(vehicle.id, 10);
+      expect(vehicle.status, 'RENTED');
+      expect(vehicle.ownerId, 5);
+      expect(vehicle.owner?.fullName, 'Nguyễn Văn Chủ Xe');
+    });
+
+    testWidgets('VehicleDetailScreen shows disabled button when vehicle is RENTED', (tester) async {
+      final rentedVehicle = VehicleModel(
+        id: 11,
+        name: 'Mazda CX-5 Premium',
+        brand: 'Mazda',
+        licensePlate: '30E-555.66',
+        vehicleType: 'SUV',
+        transmission: 'AUTO',
+        fuelType: 'PETROL',
+        basePricePerDay: 900000,
+        hasDriverOption: false,
+        driverFeePerDay: 0,
+        status: 'RENTED',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: VehicleDetailScreen(vehicle: rentedVehicle),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('XE ĐANG ĐƯỢC THUÊ'), findsOneWidget);
+    });
+
+    testWidgets('VehicleDetailScreen shows disabled button when vehicle is in MAINTENANCE', (tester) async {
+      final maintenanceVehicle = VehicleModel(
+        id: 12,
+        name: 'Hyundai SantaFe',
+        brand: 'Hyundai',
+        licensePlate: '29A-888.88',
+        vehicleType: 'SUV',
+        transmission: 'AUTO',
+        fuelType: 'DIESEL',
+        basePricePerDay: 1300000,
+        hasDriverOption: true,
+        driverFeePerDay: 400000,
+        status: 'MAINTENANCE',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: VehicleDetailScreen(vehicle: maintenanceVehicle),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('XE ĐANG BẢO DƯỠNG'), findsOneWidget);
+    });
+  });
+}

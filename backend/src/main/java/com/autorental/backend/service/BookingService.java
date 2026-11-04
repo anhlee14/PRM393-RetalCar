@@ -5,6 +5,7 @@ import com.autorental.backend.exception.BadRequestException;
 import com.autorental.backend.exception.ResourceNotFoundException;
 import com.autorental.backend.model.*;
 import com.autorental.backend.repository.BookingRepository;
+import com.autorental.backend.repository.PaymentRepository;
 import com.autorental.backend.repository.VehicleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ public class BookingService {
 
     private final BookingRepository bookingRepository;
     private final VehicleRepository vehicleRepository;
+    private final PaymentRepository paymentRepository;
     private final NotificationService notificationService;
 
     @Transactional
@@ -31,6 +33,11 @@ public class BookingService {
 
         Vehicle vehicle = vehicleRepository.findById(request.getVehicleId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy xe"));
+
+        // Quy tắc thực tế: Không cho phép chủ xe tự đặt xe của chính mình
+        if (vehicle.getOwner() != null && vehicle.getOwner().getId().equals(renter.getId())) {
+            throw new BadRequestException("Bạn không thể tự thuê xe do chính mình sở hữu!");
+        }
 
         if (vehicle.getStatus() != VehicleStatus.AVAILABLE) {
             throw new BadRequestException("Xe hiện không sẵn sàng cho thuê");
@@ -91,6 +98,13 @@ public class BookingService {
             throw new BadRequestException("Bạn không phải chủ sở hữu của chiếc xe này");
         }
 
+        // Quy tắc thực tế: Khách phải nộp cọc 30% thì chủ xe mới được duyệt
+        boolean isDepositPaid = paymentRepository.findByBookingId(bookingId).stream()
+                .anyMatch(p -> "DEPOSIT".equalsIgnoreCase(p.getPaymentType()) && "SUCCESS".equalsIgnoreCase(p.getStatus()));
+        if (!isDepositPaid) {
+            throw new BadRequestException("Khách hàng chưa thanh toán tiền đặt cọc (30%). Không thể duyệt đơn!");
+        }
+
         booking.setStatus(BookingStatus.CONFIRMED);
         booking.getVehicle().setStatus(VehicleStatus.RENTED);
         vehicleRepository.save(booking.getVehicle());
@@ -110,6 +124,10 @@ public class BookingService {
     @Transactional
     public Booking startTrip(Long bookingId) {
         Booking booking = getBookingById(bookingId);
+        if (booking.getStatus() != BookingStatus.CONFIRMED) {
+            throw new BadRequestException("Chuyến đi chỉ có thể bắt đầu khi đơn ở trạng thái ĐÃ DUYỆT (CONFIRMED)!");
+        }
+
         booking.setStatus(BookingStatus.ONGOING);
         booking.setLastRenterGpsPing(LocalDateTime.now());
         return bookingRepository.save(booking);
@@ -137,4 +155,3 @@ public class BookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt xe với ID: " + id));
     }
 }
-

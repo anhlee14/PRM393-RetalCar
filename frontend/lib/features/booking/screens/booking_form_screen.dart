@@ -141,58 +141,91 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
         );
       } else {
         if (!mounted) return;
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Row(
-              children: [
-                Icon(Icons.info_outline, color: AppColors.primary),
-                SizedBox(width: 8),
-                Text('Kết Nối Máy Chủ', style: TextStyle(fontSize: 16)),
+        final errorMsg = result['message'] ?? 'Đặt xe thất bại. Vui lòng kiểm tra lại!';
+        final isBusinessError = errorMsg.contains('Bạn không thể tự thuê') ||
+            errorMsg.contains('không sẵn sàng') ||
+            errorMsg.contains('Ngày trả xe');
+
+        if (isBusinessError) {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: AppColors.danger),
+                  SizedBox(width: 8),
+                  Text('Không Thể Đặt Xe', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              content: Text(errorMsg, style: const TextStyle(fontSize: 14)),
+              actions: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Đã hiểu'),
+                ),
               ],
             ),
-            content: Text(
-              'Máy chủ backend phản hồi: ${result['message'] ?? 'Chưa phản hồi'}.\n\nBạn có muốn tiếp tục sang màn Thanh toán Cọc (Chế độ Thử nghiệm / Demo) với các thông tin đã chọn không?',
-              style: const TextStyle(fontSize: 13),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Hủy'),
+          );
+        } else {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: AppColors.primary),
+                  SizedBox(width: 8),
+                  Text('Kết Nối Máy Chủ', style: TextStyle(fontSize: 16)),
+                ],
               ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+              content: Text(
+                'Máy chủ backend phản hồi: ${result['message'] ?? 'Chưa phản hồi'}.\n\nBạn có muốn tiếp tục sang màn Thanh toán Cọc (Chế độ Thử nghiệm / Demo) với các thông tin đã chọn không?',
+                style: const TextStyle(fontSize: 13),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Hủy'),
                 ),
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  final mockBooking = BookingModel(
-                    id: 999,
-                    vehicle: widget.vehicle,
-                    startDate: _startDate.toIso8601String(),
-                    endDate: _endDate.toIso8601String(),
-                    withDriver: _withDriver && widget.vehicle.hasDriverOption,
-                    carRentalPrice: _carPriceTotal,
-                    driverServicePrice: _driverPriceTotal,
-                    totalPrice: _totalPrice,
-                    depositAmount: _depositAmount,
-                    status: 'PENDING',
-                    pickupAddress: _pickupController.text.trim(),
-                    returnAddress: _returnController.text.trim(),
-                  );
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => CheckoutPaymentScreen(booking: mockBooking),
-                    ),
-                  );
-                },
-                child: const Text('Tiếp tục thử nghiệm'),
-              ),
-            ],
-          ),
-        );
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    final mockBooking = BookingModel(
+                      id: 999,
+                      vehicle: widget.vehicle,
+                      startDate: _startDate.toIso8601String(),
+                      endDate: _endDate.toIso8601String(),
+                      withDriver: _withDriver && widget.vehicle.hasDriverOption,
+                      carRentalPrice: _carPriceTotal,
+                      driverServicePrice: _driverPriceTotal,
+                      totalPrice: _totalPrice,
+                      depositAmount: _depositAmount,
+                      status: 'PENDING',
+                      pickupAddress: _pickupController.text.trim(),
+                      returnAddress: _returnController.text.trim(),
+                    );
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => CheckoutPaymentScreen(booking: mockBooking),
+                      ),
+                    );
+                  },
+                  child: const Text('Tiếp tục thử nghiệm'),
+                ),
+              ],
+            ),
+          );
+        }
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

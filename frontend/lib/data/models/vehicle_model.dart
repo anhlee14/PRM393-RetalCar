@@ -1,3 +1,5 @@
+import 'user_model.dart';
+
 class VehicleModel {
   final int id;
   final String name;
@@ -22,6 +24,8 @@ class VehicleModel {
   final int totalReviews;
   final String status;
   final String? thumbnailUrl;
+  final int? ownerId;
+  final UserModel? owner;
 
   VehicleModel({
     required this.id,
@@ -44,9 +48,18 @@ class VehicleModel {
     this.totalReviews = 0,
     required this.status,
     this.thumbnailUrl,
+    this.ownerId,
+    this.owner,
   });
 
   factory VehicleModel.fromJson(Map<String, dynamic> json) {
+    UserModel? parsedOwner;
+    int? parsedOwnerId = json['owner_id'];
+    if (json['owner'] is Map<String, dynamic>) {
+      parsedOwner = UserModel.fromJson(json['owner']);
+      parsedOwnerId ??= parsedOwner.id;
+    }
+
     return VehicleModel(
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
@@ -68,6 +81,8 @@ class VehicleModel {
       totalReviews: json['total_reviews'] ?? 0,
       status: json['status'] ?? 'AVAILABLE',
       thumbnailUrl: json['thumbnail_url'],
+      ownerId: parsedOwnerId,
+      owner: parsedOwner,
     );
   }
 }
@@ -99,4 +114,3 @@ class VehicleMatchModel {
     );
   }
 }
-
