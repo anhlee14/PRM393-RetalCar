@@ -4,6 +4,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/vehicle_image_helper.dart';
 import '../../../data/models/booking_model.dart';
+import '../../../data/models/vehicle_model.dart';
 import '../../../data/services/booking_service.dart';
 import '../../gps_tracking/screens/renter_route_map_screen.dart';
 import '../../inspection/screens/photo_inspection_screen.dart';
@@ -30,6 +31,135 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
     'Đang đi',
     'Hoàn thành',
   ];
+
+  void _loadMockBookings() {
+    setState(() {
+      _bookings = [
+        BookingModel(
+          id: 101,
+          startDate: DateTime.now().add(const Duration(days: 1)).toIso8601String(),
+          endDate: DateTime.now().add(const Duration(days: 3)).toIso8601String(),
+          withDriver: true,
+          carRentalPrice: 2400000,
+          driverServicePrice: 900000,
+          totalPrice: 3300000,
+          depositAmount: 990000,
+          status: 'CONFIRMED',
+          pickupAddress: 'FPT University, Khu CNC Hòa Lạc, Hà Nội',
+          returnAddress: 'FPT University, Khu CNC Hòa Lạc, Hà Nội',
+          vehicle: VehicleModel(
+            id: 1,
+            name: 'VinFast VF8 Plus 2024',
+            brand: 'VinFast',
+            modelYear: 2024,
+            licensePlate: '30K-888.99',
+            vehicleType: 'SUV',
+            transmission: 'Tự động',
+            fuelType: 'Điện',
+            basePricePerDay: 1200000,
+            hasDriverOption: true,
+            driverFeePerDay: 450000,
+            seats: 5,
+            status: 'AVAILABLE',
+            thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/2022_Vinfast_VF8_front_view.jpg/1280px-2022_Vinfast_VF8_front_view.jpg',
+          ),
+        ),
+        BookingModel(
+          id: 102,
+          startDate: DateTime.now().subtract(const Duration(hours: 4)).toIso8601String(),
+          endDate: DateTime.now().add(const Duration(days: 2)).toIso8601String(),
+          withDriver: false,
+          carRentalPrice: 1800000,
+          driverServicePrice: 0,
+          totalPrice: 1800000,
+          depositAmount: 540000,
+          status: 'ONGOING',
+          pickupAddress: 'Cầu Giấy, Hà Nội',
+          returnAddress: 'Cầu Giấy, Hà Nội',
+          vehicle: VehicleModel(
+            id: 2,
+            name: 'Mazda CX-5 2.0 Premium',
+            brand: 'Mazda',
+            modelYear: 2023,
+            licensePlate: '30H-678.90',
+            vehicleType: 'SUV',
+            transmission: 'Tự động',
+            fuelType: 'Xăng',
+            basePricePerDay: 900000,
+            hasDriverOption: true,
+            driverFeePerDay: 400000,
+            seats: 5,
+            status: 'RENTED',
+            thumbnailUrl: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341',
+          ),
+        ),
+        BookingModel(
+          id: 103,
+          startDate: DateTime.now().subtract(const Duration(days: 3)).toIso8601String(),
+          endDate: DateTime.now().subtract(const Duration(hours: 1)).toIso8601String(),
+          withDriver: true,
+          carRentalPrice: 2200000,
+          driverServicePrice: 800000,
+          totalPrice: 3000000,
+          depositAmount: 900000,
+          status: 'COMPLETED',
+          pickupAddress: 'Sân bay Nội Bài, Hà Nội',
+          returnAddress: 'Hoàn Kiếm, Hà Nội',
+          vehicle: VehicleModel(
+            id: 3,
+            name: 'Toyota Camry 2.5Q 2023',
+            brand: 'Toyota',
+            modelYear: 2023,
+            licensePlate: '29A-999.88',
+            vehicleType: 'SEDAN',
+            transmission: 'Tự động',
+            fuelType: 'Xăng',
+            basePricePerDay: 1100000,
+            hasDriverOption: true,
+            driverFeePerDay: 400000,
+            seats: 5,
+            status: 'AVAILABLE',
+            thumbnailUrl: 'https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb',
+          ),
+        ),
+        BookingModel(
+          id: 104,
+          startDate: DateTime.now().add(const Duration(days: 5)).toIso8601String(),
+          endDate: DateTime.now().add(const Duration(days: 7)).toIso8601String(),
+          withDriver: false,
+          carRentalPrice: 1600000,
+          driverServicePrice: 0,
+          totalPrice: 1600000,
+          depositAmount: 480000,
+          status: 'PENDING',
+          pickupAddress: 'Hà Đông, Hà Nội',
+          returnAddress: 'Hà Đông, Hà Nội',
+          vehicle: VehicleModel(
+            id: 4,
+            name: 'Honda CR-V L 2023',
+            brand: 'Honda',
+            modelYear: 2023,
+            licensePlate: '30E-123.45',
+            vehicleType: 'SUV',
+            transmission: 'Tự động',
+            fuelType: 'Xăng',
+            basePricePerDay: 800000,
+            hasDriverOption: false,
+            driverFeePerDay: 0,
+            seats: 7,
+            status: 'AVAILABLE',
+            thumbnailUrl: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf',
+          ),
+        ),
+      ];
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Đã nạp 4 chuyến xe mẫu để bạn kiểm thử đầy đủ các trạng thái!'),
+        backgroundColor: AppColors.success,
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -120,8 +250,35 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
       );
       _fetchBookings();
     } else {
+      // Fallback cục bộ cho chế độ kiểm thử
+      setState(() {
+        _bookings = _bookings.map((b) {
+          if (b.id == id) {
+            return BookingModel(
+              id: b.id,
+              renter: b.renter,
+              vehicle: b.vehicle,
+              startDate: b.startDate,
+              endDate: b.endDate,
+              withDriver: b.withDriver,
+              carRentalPrice: b.carRentalPrice,
+              driverServicePrice: b.driverServicePrice,
+              totalPrice: b.totalPrice,
+              depositAmount: b.depositAmount,
+              status: 'ONGOING',
+              pickupAddress: b.pickupAddress,
+              returnAddress: b.returnAddress,
+              lastRenterGpsPing: b.lastRenterGpsPing,
+            );
+          }
+          return b;
+        }).toList();
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Không thể bắt đầu chuyến đi.'), backgroundColor: AppColors.danger),
+        const SnackBar(
+          content: Text('Bắt đầu hành trình di chuyển (Chế độ Thử nghiệm)!'),
+          backgroundColor: AppColors.success,
+        ),
       );
     }
   }
@@ -135,8 +292,35 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
       );
       _fetchBookings();
     } else {
+      // Fallback cục bộ cho chế độ kiểm thử
+      setState(() {
+        _bookings = _bookings.map((b) {
+          if (b.id == id) {
+            return BookingModel(
+              id: b.id,
+              renter: b.renter,
+              vehicle: b.vehicle,
+              startDate: b.startDate,
+              endDate: b.endDate,
+              withDriver: b.withDriver,
+              carRentalPrice: b.carRentalPrice,
+              driverServicePrice: b.driverServicePrice,
+              totalPrice: b.totalPrice,
+              depositAmount: b.depositAmount,
+              status: 'COMPLETED',
+              pickupAddress: b.pickupAddress,
+              returnAddress: b.returnAddress,
+              lastRenterGpsPing: b.lastRenterGpsPing,
+            );
+          }
+          return b;
+        }).toList();
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Không thể hoàn tất chuyến xe.'), backgroundColor: AppColors.danger),
+        const SnackBar(
+          content: Text('Đã hoàn tất chuyến xe (Chế độ Thử nghiệm)!'),
+          backgroundColor: AppColors.success,
+        ),
       );
     }
   }
@@ -148,6 +332,18 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
       appBar: AppBar(
         title: const Text('Lịch Sử Chuyến Đi & Đơn Thuê'),
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.auto_awesome),
+            tooltip: 'Nạp dữ liệu mẫu thử nghiệm',
+            onPressed: _loadMockBookings,
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Làm mới từ máy chủ',
+            onPressed: _fetchBookings,
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           isScrollable: false,
@@ -208,10 +404,21 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
               style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 18),
-            ElevatedButton.icon(
-              onPressed: _fetchBookings,
-              icon: const Icon(Icons.refresh, size: 18),
-              label: const Text('Làm mới'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _fetchBookings,
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text('Làm mới'),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: _loadMockBookings,
+                  icon: const Icon(Icons.auto_awesome, size: 18),
+                  label: const Text('Nạp dữ liệu mẫu'),
+                ),
+              ],
             ),
           ],
         ),

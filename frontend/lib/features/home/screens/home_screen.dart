@@ -395,7 +395,12 @@ class _HomeScreenState extends State<HomeScreen> {
     required String imageUrl,
     required double distanceKm,
   }) {
-    return Container(
+    return InkWell(
+      onTap: () {
+        setState(() => _currentNavIndex = 1);
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -483,6 +488,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 

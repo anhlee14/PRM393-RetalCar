@@ -67,10 +67,38 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
       if (result['success'] == true) {
         _showSuccessDialog();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Thanh toán thất bại, vui lòng thử lại!'),
-            backgroundColor: AppColors.danger,
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.payment, color: AppColors.primary),
+                SizedBox(width: 8),
+                Text('Xác Nhận Thanh Toán', style: TextStyle(fontSize: 16)),
+              ],
+            ),
+            content: Text(
+              'Máy chủ thanh toán: ${result['message'] ?? 'Chưa phản hồi'}.\n\nBạn có muốn mô phỏng xác nhận thanh toán cọc thành công (Chế độ Thử nghiệm / Demo) không?',
+              style: const TextStyle(fontSize: 13),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Hủy'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _showSuccessDialog();
+                },
+                child: const Text('Mô phỏng Thành công'),
+              ),
+            ],
           ),
         );
       }

@@ -4,6 +4,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/vehicle_image_helper.dart';
 import '../../../data/models/vehicle_model.dart';
+import '../../../data/models/booking_model.dart';
 import '../../../data/services/booking_service.dart';
 import 'checkout_payment_screen.dart';
 
@@ -127,10 +128,57 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Đặt xe thất bại. Vui lòng thử lại!'),
-            backgroundColor: AppColors.danger,
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.info_outline, color: AppColors.primary),
+                SizedBox(width: 8),
+                Text('Kết Nối Máy Chủ', style: TextStyle(fontSize: 16)),
+              ],
+            ),
+            content: Text(
+              'Máy chủ backend phản hồi: ${result['message'] ?? 'Chưa phản hồi'}.\n\nBạn có muốn tiếp tục sang màn Thanh toán Cọc (Chế độ Thử nghiệm / Demo) với các thông tin đã chọn không?',
+              style: const TextStyle(fontSize: 13),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Hủy'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  final mockBooking = BookingModel(
+                    id: 999,
+                    vehicle: widget.vehicle,
+                    startDate: _startDate.toIso8601String(),
+                    endDate: _endDate.toIso8601String(),
+                    withDriver: _withDriver && widget.vehicle.hasDriverOption,
+                    carRentalPrice: _carPriceTotal,
+                    driverServicePrice: _driverPriceTotal,
+                    totalPrice: _totalPrice,
+                    depositAmount: _depositAmount,
+                    status: 'PENDING',
+                    pickupAddress: _pickupController.text.trim(),
+                    returnAddress: _returnController.text.trim(),
+                  );
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CheckoutPaymentScreen(booking: mockBooking),
+                    ),
+                  );
+                },
+                child: const Text('Tiếp tục thử nghiệm'),
+              ),
+            ],
           ),
         );
       }

@@ -243,10 +243,48 @@ class _PhotoInspectionScreenState extends State<PhotoInspectionScreen> {
         );
         Navigator.pop(context, true);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Gửi biên bản thất bại, vui lòng thử lại!'),
-            backgroundColor: AppColors.danger,
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.camera_alt, color: AppColors.primary),
+                SizedBox(width: 8),
+                Text('Gửi Biên Bản', style: TextStyle(fontSize: 16)),
+              ],
+            ),
+            content: Text(
+              'Máy chủ thẩm định xe: ${result['message'] ?? 'Chưa phản hồi'}.\n\nBạn có muốn lưu biên bản này ở Chế độ Thử nghiệm (Demo) và hoàn tất không?',
+              style: const TextStyle(fontSize: 13),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Hủy'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        _isCheckIn
+                            ? 'Lưu biên bản nhận xe (Chế độ Thử nghiệm) thành công!'
+                            : 'Lưu biên bản trả xe (Chế độ Thử nghiệm) thành công!',
+                      ),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                  Navigator.pop(context, true);
+                },
+                child: const Text('Lưu Thử nghiệm'),
+              ),
+            ],
           ),
         );
       }

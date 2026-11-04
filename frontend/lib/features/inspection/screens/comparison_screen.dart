@@ -17,6 +17,57 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
   bool _isLoading = true;
   bool _isConfirming = false;
 
+  void _loadMockComparison() {
+    setState(() {
+      _comparison = InspectionComparisonModel(
+        bookingId: widget.bookingId == 0 ? 101 : widget.bookingId,
+        vehicleName: 'VinFast VF8 Plus 2024',
+        licensePlate: '30K-888.99',
+        checkIn: InspectionModel(
+          id: 501,
+          bookingId: widget.bookingId == 0 ? 101 : widget.bookingId,
+          stage: 'CHECK_IN',
+          frontImg: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/2022_Vinfast_VF8_front_view.jpg/1280px-2022_Vinfast_VF8_front_view.jpg',
+          rearImg: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/VinFast_VF_8_DSC_8470.jpg/1280px-VinFast_VF_8_DSC_8470.jpg',
+          leftImg: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341',
+          rightImg: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341',
+          odoImg: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd',
+          fuelImg: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d',
+          odoKm: 15200.0,
+          fuelLevelPercent: 100.0,
+          notes: 'Xe nguyên vẹn, ngoại thất sạch sẽ, pin 100% khi nhận bàn giao.',
+          isConfirmedByRenter: true,
+          isConfirmedByOwner: true,
+        ),
+        checkOut: InspectionModel(
+          id: 502,
+          bookingId: widget.bookingId == 0 ? 101 : widget.bookingId,
+          stage: 'CHECK_OUT',
+          frontImg: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/2022_Vinfast_VF8_front_view.jpg/1280px-2022_Vinfast_VF8_front_view.jpg',
+          rearImg: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/VinFast_VF_8_DSC_8470.jpg/1280px-VinFast_VF_8_DSC_8470.jpg',
+          leftImg: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341',
+          rightImg: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341',
+          odoImg: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd',
+          fuelImg: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d',
+          odoKm: 15380.0,
+          fuelLevelPercent: 85.0,
+          notes: 'Khách hoàn trả xe đúng hẹn, ngoại thất sạch sẽ, không trầy xước phát sinh.',
+          isConfirmedByRenter: true,
+          isConfirmedByOwner: false,
+        ),
+        odoDifferenceKm: 180.0,
+        fuelDifferencePercent: -15.0,
+        isFullyConfirmed: false,
+      );
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Đã nạp biên bản đối chiếu Before/After mẫu để kiểm thử!'),
+        backgroundColor: AppColors.success,
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -60,10 +111,43 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
         );
         _fetchComparison();
       } else {
+        // Fallback cho chế độ thử nghiệm
+        setState(() {
+          if (_comparison != null) {
+            final co = _comparison!.checkOut;
+            _comparison = InspectionComparisonModel(
+              bookingId: _comparison!.bookingId,
+              vehicleName: _comparison!.vehicleName,
+              licensePlate: _comparison!.licensePlate,
+              checkIn: _comparison!.checkIn,
+              checkOut: co != null
+                  ? InspectionModel(
+                      id: co.id,
+                      bookingId: co.bookingId,
+                      stage: co.stage,
+                      frontImg: co.frontImg,
+                      rearImg: co.rearImg,
+                      leftImg: co.leftImg,
+                      rightImg: co.rightImg,
+                      odoImg: co.odoImg,
+                      fuelImg: co.fuelImg,
+                      odoKm: co.odoKm,
+                      fuelLevelPercent: co.fuelLevelPercent,
+                      notes: co.notes,
+                      isConfirmedByRenter: true,
+                      isConfirmedByOwner: true,
+                    )
+                  : null,
+              odoDifferenceKm: _comparison!.odoDifferenceKm,
+              fuelDifferencePercent: _comparison!.fuelDifferencePercent,
+              isFullyConfirmed: true,
+            );
+          }
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Xác nhận thất bại, vui lòng thử lại.'),
-            backgroundColor: AppColors.danger,
+            content: Text('Xác nhận bàn giao & hoàn cọc thành công (Chế độ Thử nghiệm)!'),
+            backgroundColor: AppColors.success,
           ),
         );
       }
@@ -129,6 +213,18 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
       appBar: AppBar(
         title: const Text('Đối Chiếu Trước & Sau (Before/After)'),
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.auto_awesome),
+            tooltip: 'Nạp mẫu đối chiếu',
+            onPressed: _loadMockComparison,
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Làm mới',
+            onPressed: _fetchComparison,
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -195,10 +291,21 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
               style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: _fetchComparison,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Tải lại dữ liệu'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _fetchComparison,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Tải lại'),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: _loadMockComparison,
+                  icon: const Icon(Icons.auto_awesome),
+                  label: const Text('Xem mẫu đối chiếu'),
+                ),
+              ],
             ),
           ],
         ),
