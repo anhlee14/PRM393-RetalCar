@@ -152,7 +152,7 @@ public class PaymentService {
         Payment payment = Payment.builder()
                 .booking(booking)
                 .user(booking.getRenter())
-                .amount(amount.compareTo(BigDecimal.ZERO) > 0 ? amount : BigDecimal.valueOf(booking.getDepositAmount()))
+                .amount(amount.compareTo(BigDecimal.ZERO) > 0 ? amount : (booking.getDepositAmount() != null ? booking.getDepositAmount() : BigDecimal.ZERO))
                 .paymentType("DEPOSIT")
                 .paymentMethod("BANK_TRANSFER_QR")
                 .status("SUCCESS")
