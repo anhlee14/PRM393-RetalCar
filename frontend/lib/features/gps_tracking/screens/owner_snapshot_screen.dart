@@ -126,7 +126,7 @@ class _OwnerSnapshotScreenState extends State<OwnerSnapshotScreen> {
           _isQuotaExceeded = _remainingQuota <= 0;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('📍 Đã chụp Snapshot vị trí xe! Còn lại $_remainingQuota/$_totalAllowed lượt hôm nay.'),
+              content: Text('Đã chụp Snapshot vị trí xe! Còn lại $_remainingQuota/$_totalAllowed lượt hôm nay.'),
               backgroundColor: AppColors.success,
             ),
           );
@@ -324,14 +324,14 @@ class _OwnerSnapshotScreenState extends State<OwnerSnapshotScreen> {
                             ),
                       label: Text(
                         !isOngoing
-                            ? 'CHỈ ĐỊNH VỊ KHI CHUYẾN XE ĐANG DI CHUYỂN (ONGOING)'
+                            ? 'Chỉ định vị khi chuyến xe đã di chuyển (ONGOING)'
                             : (_isQuotaExceeded
-                                ? 'ĐÃ HẾT 20 LƯỢT CHECK HÔM NAY'
+                                ? 'Đã hết 20 lượt check hôm nay!'
                                 : (_isCapturing
-                                    ? 'ĐANG ĐỊNH VỊ VỊ TRÍ XE...'
+                                    ? 'Đang định vị vị trí xe...'
                                     : (_snapshot == null
-                                        ? 'ĐỊNH VỊ VỊ TRÍ XE NGAY (-1 LƯỢT QUOTA)'
-                                        : 'LÀM MỚI SNAPSHOT VỊ TRÍ (-1 LƯỢT QUOTA)'))),
+                                        ? 'Định vị vị trí xe ngay (-1 lượt)'
+                                        : 'Làm mới vị trí (-1 lượt)'))),
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                       style: ElevatedButton.styleFrom(
@@ -340,13 +340,6 @@ class _OwnerSnapshotScreenState extends State<OwnerSnapshotScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
-                    ),
-
-                    const SizedBox(height: 10),
-                    Text(
-                      'Bảo mật GDPR: Mở trang này không bị mất lượt. Chỉ khi bạn bấm nút Định vị phía trên, hệ thống mới trích xuất 1 điểm tọa độ mới nhất và trừ 1 lượt Quota.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600, height: 1.35),
                     ),
                   ],
                 ),
@@ -467,7 +460,7 @@ class _OwnerSnapshotScreenState extends State<OwnerSnapshotScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Hạn ngạch kiểm tra riêng tư (Quota Chủ xe)',
+                      'Hạn mức kiểm tra vị trí của xe/ngày.',
                       style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                     ),
                     Text(
@@ -578,11 +571,10 @@ class _OwnerSnapshotScreenState extends State<OwnerSnapshotScreen> {
             ),
             child: const Row(
               children: [
-                Icon(Icons.privacy_tip_outlined, size: 16, color: Colors.deepOrange),
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Bảo vệ riêng tư: CHỈ hiển thị 1 điểm tức thời • KHÔNG hiển thị lộ trình (No Route)',
+                    'Chỉ hiển thị 1 điểm tức thời, không hiển thị lộ trình.',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -678,11 +670,6 @@ class _OwnerSnapshotScreenState extends State<OwnerSnapshotScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            hasSnapshot ? Icons.camera_alt_rounded : Icons.shield_outlined,
-                            size: 14,
-                            color: AppColors.primary,
-                          ),
                           const SizedBox(width: 4),
                           Text(
                             hasSnapshot ? 'SNAPSHOT TỨC THỜI (1 ĐIỂM)' : 'CHẾ ĐỘ BẢO VỆ QUOTA',

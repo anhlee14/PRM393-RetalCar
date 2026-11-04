@@ -12,6 +12,8 @@ import '../../inspection/screens/photo_inspection_screen.dart';
 import '../../inspection/screens/comparison_screen.dart';
 import 'checkout_payment_screen.dart';
 import '../../inspection/screens/checkin_review_screen.dart';
+import '../../../data/models/inspection_model.dart';
+import '../../../data/services/inspection_service.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -29,6 +31,11 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
   bool _isLoading = true;
   UserModel? _currentUser;
   Set<int> _paidDepositBookingIds = {};
+  Set<int> _checkedInBookingIds = {};
+  Set<int> _renterConfirmedCheckInIds = {};
+  Set<int> _checkedOutBookingIds = {};
+  Set<int> _completedBookingIds = {};
+  Map<int, InspectionComparisonModel> _inspections = {};
   bool get _isOwner => _currentUser?.role == 'ROLE_OWNER';
 
   final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
@@ -205,23 +212,60 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
       }
     }
     Set<int> localPaidSet = {};
+    Set<int> localCheckedIn = {};
+    Set<int> localRenterConfirmed = {};
+    Set<int> localCheckedOut = {};
+    Set<int> localCompleted = {};
     try {
       final prefs = await SharedPreferences.getInstance();
-      final paidList = prefs.getStringList('paid_deposit_bookings') ?? [];
-      localPaidSet = paidList.map((e) => int.tryParse(e) ?? 0).where((id) => id > 0).toSet();
+      localPaidSet = (prefs.getStringList('paid_deposit_bookings') ?? []).map((e) => int.tryParse(e) ?? 0).where((id) => id > 0).toSet();
+      localCheckedIn = (prefs.getStringList('checked_in_bookings') ?? []).map((e) => int.tryParse(e) ?? 0).where((id) => id > 0).toSet();
+      localRenterConfirmed = (prefs.getStringList('renter_confirmed_checkin_bookings') ?? []).map((e) => int.tryParse(e) ?? 0).where((id) => id > 0).toSet();
+      localCheckedOut = (prefs.getStringList('checked_out_bookings') ?? []).map((e) => int.tryParse(e) ?? 0).where((id) => id > 0).toSet();
+      localCompleted = (prefs.getStringList('completed_bookings') ?? []).map((e) => int.tryParse(e) ?? 0).where((id) => id > 0).toSet();
     } catch (_) {}
 
     for (var b in list) {
       if (b.status == 'CONFIRMED' || b.status == 'ONGOING' || b.status == 'COMPLETED') {
         localPaidSet.add(b.id);
       }
+      if (b.status == 'COMPLETED') {
+        localCompleted.add(b.id);
+      }
     }
+
+    Map<int, InspectionComparisonModel> inspMap = {};
+    try {
+      final futures = list.map((b) async {
+        try {
+          final comp = await InspectionService.getComparison(b.id);
+          return MapEntry(b.id, comp);
+        } catch (_) {
+          return null;
+        }
+      });
+      final results = await Future.wait(futures);
+      for (var r in results) {
+        if (r != null && r.value != null) {
+          inspMap[r.key] = r.value!;
+          if (r.value!.checkIn != null) localCheckedIn.add(r.key);
+          if (r.value!.checkIn?.isConfirmedByRenter == true) localRenterConfirmed.add(r.key);
+          if (r.value!.checkOut != null) localCheckedOut.add(r.key);
+          if (r.value!.checkOut?.isConfirmedByOwner == true) localCompleted.add(r.key);
+        }
+      }
+    } catch (_) {}
 
     if (!mounted) return;
     setState(() {
       _currentUser = user;
       _bookings = list;
       _paidDepositBookingIds = localPaidSet;
+      _checkedInBookingIds = localCheckedIn;
+      _renterConfirmedCheckInIds = localRenterConfirmed;
+      _checkedOutBookingIds = localCheckedOut;
+      _completedBookingIds = localCompleted;
+      _inspections = inspMap;
       _isLoading = false;
     });
   }
@@ -395,48 +439,6 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Bắt đầu hành trình di chuyển (Chế độ Thử nghiệm)!'),
-          backgroundColor: AppColors.success,
-        ),
-      );
-    }
-  }
-
-  Future<void> _handleCompleteTrip(int id) async {
-    final ok = await BookingService.completeBooking(id);
-    if (!mounted) return;
-    if (ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã hoàn thành chuyến xe!'), backgroundColor: AppColors.success),
-      );
-      _fetchBookings();
-    } else {
-      // Fallback cục bộ cho chế độ kiểm thử
-      setState(() {
-        _bookings = _bookings.map((b) {
-          if (b.id == id) {
-            return BookingModel(
-              id: b.id,
-              renter: b.renter,
-              vehicle: b.vehicle,
-              startDate: b.startDate,
-              endDate: b.endDate,
-              withDriver: b.withDriver,
-              carRentalPrice: b.carRentalPrice,
-              driverServicePrice: b.driverServicePrice,
-              totalPrice: b.totalPrice,
-              depositAmount: b.depositAmount,
-              status: 'COMPLETED',
-              pickupAddress: b.pickupAddress,
-              returnAddress: b.returnAddress,
-              lastRenterGpsPing: b.lastRenterGpsPing,
-            );
-          }
-          return b;
-        }).toList();
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đã hoàn tất chuyến xe (Chế độ Thử nghiệm)!'),
           backgroundColor: AppColors.success,
         ),
       );
@@ -753,174 +755,52 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
     final canApproveBooking = _isOwner && !isRenterOfBooking;
     final isDepositPaid = _paidDepositBookingIds.contains(b.id);
 
+    final comp = _inspections[b.id];
+    final hasCheckIn = (comp?.checkIn != null) || _checkedInBookingIds.contains(b.id);
+    final isCheckInConfirmedByRenter = (comp?.checkIn?.isConfirmedByRenter == true) || _renterConfirmedCheckInIds.contains(b.id);
+    final hasCheckOut = (comp?.checkOut != null) || _checkedOutBookingIds.contains(b.id);
+    final isTripCompleted = (st == 'COMPLETED') || _completedBookingIds.contains(b.id);
+
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
-        // 1. Nút Lộ trình GPS
-        OutlinedButton.icon(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => _isOwner
-                    ? OwnerSnapshotScreen(bookingId: b.id, initialStatus: b.status, initialVehicleName: b.vehicle?.name)
-                    : RenterRouteMapScreen(bookingId: b.id, initialStatus: b.status, initialVehicleName: b.vehicle?.name),
-              ),
-            );
-          },
-          icon: Icon(_isOwner ? Icons.radar_rounded : Icons.map_rounded, size: 16),
-          label: Text(_isOwner ? 'Định vị Snapshot (Chủ xe)' : 'Lộ trình GPS & Ping', style: const TextStyle(fontSize: 12)),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.primary,
-            side: const BorderSide(color: AppColors.primary),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        ),
-
-        // 2. Check-in:
-        // CHỦ XE: "Check-in Giao xe" (chủ xe up ảnh, ODO, xăng ban đầu và đẩy lên cho khách thuê xem)
-        if (canApproveBooking && (st == 'CONFIRMED' || st == 'PENDING' || st == 'ONGOING'))
-          OutlinedButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => PhotoInspectionScreen(
-                    bookingId: b.id,
-                    stage: 'CHECK_IN',
-                    isOwner: true,
-                    title: 'BIÊN BẢN GIAO XE (CHỦ XE CHECK-IN)',
-                    submitButtonText: 'GỬI BIÊN BẢN GIAO XE CHO KHÁCH',
-                  ),
-                ),
-              ).then((_) => _fetchBookings());
-            },
-            icon: const Icon(Icons.car_rental_rounded, size: 16),
-            label: const Text('Check-in Giao xe', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primaryDark,
-              side: const BorderSide(color: AppColors.primaryDark),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-          ),
-
-        // NGƯỜI THUÊ: "Xác nhận nhận xe" (người thuê xem biên bản bàn giao của chủ xe và xác nhận)
-        if (!canApproveBooking && (st == 'CONFIRMED' || st == 'ONGOING'))
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => CheckInReviewScreen(bookingId: b.id),
-                ),
-              ).then((_) => _fetchBookings());
-            },
-            icon: const Icon(Icons.assignment_turned_in_rounded, size: 16),
-            label: const Text('Xác nhận nhận xe', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-          ),
-
-        // 3. Check-out:
-        // NGƯỜI THUÊ: "Check-out Trả xe" (người thuê up thông tin, ảnh ODO, xăng lúc trả xe lên)
-        if (!canApproveBooking && st == 'ONGOING')
-          OutlinedButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => PhotoInspectionScreen(
-                    bookingId: b.id,
-                    stage: 'CHECK_OUT',
-                    isOwner: false,
-                    title: 'BIÊN BẢN TRẢ XE (NGƯỜI THUÊ CHECK-OUT)',
-                    submitButtonText: 'GỬI BIÊN BẢN TRẢ XE CHO CHỦ XE',
-                  ),
-                ),
-              ).then((_) => _fetchBookings());
-            },
-            icon: const Icon(Icons.camera_alt_outlined, size: 16),
-            label: const Text('Check-out Trả xe', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.warning,
-              side: const BorderSide(color: AppColors.warning),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-          ),
-
-        // CHỦ XE: "Duyệt biên bản trả xe" (chủ xe xem thông tin khách up lên và duyệt)
-        if (canApproveBooking && (st == 'ONGOING' || st == 'COMPLETED'))
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => ComparisonScreen(bookingId: b.id)),
-              ).then((_) => _fetchBookings());
-            },
-            icon: const Icon(Icons.fact_check_rounded, size: 16),
-            label: const Text('Duyệt biên bản trả xe', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.warning,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-          ),
-
-        // 4. Nút Đối chiếu Before/After (hiển thị khi chuyến xe hoàn thành để cả 2 bên cùng xem lại)
-        if (st == 'COMPLETED')
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => ComparisonScreen(bookingId: b.id)),
-              ).then((_) => _fetchBookings());
-            },
-            icon: const Icon(Icons.compare_arrows_rounded, size: 16),
-            label: const Text('Đối chiếu Before/After', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-          ),
-
-        // 5. Nút Khởi hành / Hoàn thành theo trạng thái
-        if (st == 'CONFIRMED')
-          ElevatedButton.icon(
-            onPressed: () => _handleStartTrip(b.id),
-            icon: const Icon(Icons.play_arrow_rounded, size: 16),
-            label: const Text('Bắt đầu chuyến đi', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-          ),
-
+        // 1. NÚT ĐỊNH VỊ GPS PHÂN QUYỀN THEO VAI TRÒ: Chỉ hiện khi chuyến đi đang diễn ra (ONGOING)
         if (st == 'ONGOING')
-          ElevatedButton.icon(
-            onPressed: () => _handleCompleteTrip(b.id),
-            icon: const Icon(Icons.flag_rounded, size: 16),
-            label: const Text('Hoàn tất chuyến xe', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blueGrey,
-              foregroundColor: Colors.white,
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => canApproveBooking
+                      ? OwnerSnapshotScreen(
+                          bookingId: b.id,
+                          initialStatus: b.status,
+                          initialVehicleName: b.vehicle?.name,
+                        )
+                      : RenterRouteMapScreen(
+                          bookingId: b.id,
+                          initialStatus: b.status,
+                          initialVehicleName: b.vehicle?.name,
+                        ),
+                ),
+              );
+            },
+            icon: Icon(canApproveBooking ? Icons.radar_rounded : Icons.location_on_rounded, size: 16),
+            label: Text(
+              canApproveBooking ? 'Định vị Snapshot (Chủ xe)' : 'Lộ trình GPS & Ping',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              side: const BorderSide(color: AppColors.primary),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
           ),
 
+        // ==================== A. TRẠNG THÁI PENDING ====================
+        // Chủ xe: Duyệt đơn thuê
         if (st == 'PENDING' && canApproveBooking)
           ElevatedButton.icon(
             onPressed: () => _handleConfirmBooking(b.id),
@@ -933,6 +813,25 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
           ),
+        if (canApproveBooking && isDepositPaid && st == 'PENDING')
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.green.shade200),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.verified_rounded, size: 13, color: AppColors.success),
+                SizedBox(width: 4),
+                Text('Khách đã nộp cọc', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.success)),
+              ],
+            ),
+          ),
+
+        // Khách thuê: Chờ chủ xe duyệt đơn & Thanh toán cọc
         if (st == 'PENDING' && !canApproveBooking)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
@@ -946,10 +845,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
               children: [
                 Icon(Icons.hourglass_top_rounded, size: 14, color: Colors.orange.shade800),
                 const SizedBox(width: 6),
-                Text(
-                  'Chờ chủ xe duyệt đơn',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange.shade800),
-                ),
+                Text('Chờ chủ xe duyệt đơn', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange.shade800)),
               ],
             ),
           ),
@@ -962,15 +858,12 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: Colors.green.shade300),
                   ),
-                  child: Row(
+                  child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.check_circle_rounded, size: 14, color: AppColors.success),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Đã thanh toán cọc',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.success),
-                      ),
+                      SizedBox(width: 6),
+                      Text('Đã thanh toán cọc', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.success)),
                     ],
                   ),
                 )
@@ -990,26 +883,237 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
-        if (canApproveBooking && isDepositPaid && st == 'PENDING')
+
+        // ==================== B. TRẠNG THÁI CONFIRMED ====================
+        // 1. CHỦ XE: Check-in Giao xe (khi chưa gửi) -> gửi xong MẤT NÚT, hiện badge
+        if (canApproveBooking && st == 'CONFIRMED')
+          !hasCheckIn
+              ? OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PhotoInspectionScreen(
+                          bookingId: b.id,
+                          stage: 'CHECK_IN',
+                          isOwner: true,
+                          title: 'BIÊN BẢN GIAO XE (CHỦ XE CHECK-IN)',
+                          submitButtonText: 'GỬI BIÊN BẢN GIAO XE CHO KHÁCH',
+                        ),
+                      ),
+                    ).then((_) => _fetchBookings());
+                  },
+                  icon: const Icon(Icons.car_rental_rounded, size: 16),
+                  label: const Text('Check-in Giao xe', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primaryDark,
+                    side: const BorderSide(color: AppColors.primaryDark),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                )
+              : Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle_rounded, size: 14, color: AppColors.primary),
+                      SizedBox(width: 6),
+                      Text('Đã check-in giao xe (Chờ khách nhận)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                    ],
+                  ),
+                ),
+
+        // 2. NGƯỜI THUÊ: Xác nhận nhận xe -> sau đó hiện nút "Bắt đầu chuyến đi"
+        if (!canApproveBooking && st == 'CONFIRMED')
+          if (!hasCheckIn)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber.shade300),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.access_time_rounded, size: 14, color: Colors.amber.shade900),
+                  const SizedBox(width: 6),
+                  Text('Chờ chủ xe check-in giao xe', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.amber.shade900)),
+                ],
+              ),
+            )
+          else if (!isCheckInConfirmedByRenter)
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CheckInReviewScreen(bookingId: b.id),
+                  ),
+                ).then((_) => _fetchBookings());
+              },
+              icon: const Icon(Icons.assignment_turned_in_rounded, size: 16),
+              label: const Text('Xác nhận nhận xe', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            )
+          else ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green.shade300),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle_rounded, size: 14, color: AppColors.success),
+                  SizedBox(width: 6),
+                  Text('Đã nhận xe', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.success)),
+                ],
+              ),
+            ),
+            // Người thuê chọn bắt đầu chuyến đi
+            ElevatedButton.icon(
+              onPressed: () => _handleStartTrip(b.id),
+              icon: const Icon(Icons.play_arrow_rounded, size: 16),
+              label: const Text('Bắt đầu chuyến đi', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.success,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ],
+
+        // ==================== C. TRẠNG THÁI ONGOING ====================
+        // 1. NGƯỜI THUÊ: "Hoàn thành chuyến đi" (Bấm vào mở form check-out trả xe, gửi xong MẤT NÚT)
+        if (!canApproveBooking && st == 'ONGOING')
+          !hasCheckOut
+              ? ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PhotoInspectionScreen(
+                          bookingId: b.id,
+                          stage: 'CHECK_OUT',
+                          isOwner: false,
+                          title: 'BIÊN BẢN TRẢ XE (HOÀN THÀNH CHUYẾN ĐI)',
+                          submitButtonText: 'GỬI BIÊN BẢN TRẢ XE CHO CHỦ XE',
+                        ),
+                      ),
+                    ).then((_) => _fetchBookings());
+                  },
+                  icon: const Icon(Icons.flag_rounded, size: 16),
+                  label: const Text('Hoàn thành chuyến đi', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.warning,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                )
+              : Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle_rounded, size: 14, color: AppColors.primary),
+                      SizedBox(width: 6),
+                      Text('Đã gửi biên bản trả xe (Chờ chủ xe duyệt)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                    ],
+                  ),
+                ),
+
+        // 2. CHỦ XE: "Duyệt biên bản trả xe" (khi khách đã gửi check-out) -> Duyệt xong chuyển sang Hoàn thành (COMPLETED)
+        if (canApproveBooking && st == 'ONGOING')
+          !hasCheckOut
+              ? Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.directions_car_rounded, size: 14, color: AppColors.primary),
+                      SizedBox(width: 6),
+                      Text('Chuyến đi đang diễn ra (Chờ khách trả xe)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                    ],
+                  ),
+                )
+              : ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => ComparisonScreen(bookingId: b.id)),
+                    ).then((_) => _fetchBookings());
+                  },
+                  icon: const Icon(Icons.fact_check_rounded, size: 16),
+                  label: const Text('Duyệt biên bản trả xe', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.success,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+
+        // ==================== D. TRẠNG THÁI COMPLETED ====================
+        if (isTripCompleted) ...[
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             decoration: BoxDecoration(
               color: Colors.green.shade50,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.green.shade200),
+              border: Border.all(color: Colors.green.shade300),
             ),
-            child: Row(
+            child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.verified_rounded, size: 13, color: AppColors.success),
-                const SizedBox(width: 4),
-                Text(
-                  'Khách đã nộp cọc',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.success),
-                ),
+                Icon(Icons.flag_rounded, size: 14, color: AppColors.success),
+                SizedBox(width: 6),
+                Text('Chuyến đi đã hoàn tất', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.success)),
               ],
             ),
           ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => ComparisonScreen(bookingId: b.id)),
+              ).then((_) => _fetchBookings());
+            },
+            icon: const Icon(Icons.compare_arrows_rounded, size: 16),
+            label: const Text('Đối chiếu Before/After', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ],
       ],
     );
   }

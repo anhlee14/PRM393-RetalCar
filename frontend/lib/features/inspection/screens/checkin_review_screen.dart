@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/inspection_model.dart';
 import '../../../data/services/inspection_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CheckInReviewScreen extends StatefulWidget {
   final int bookingId;
@@ -69,6 +70,19 @@ class _CheckInReviewScreenState extends State<CheckInReviewScreen> {
     );
   }
 
+  
+  Future<void> _recordCheckInConfirmed() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList('renter_confirmed_checkin_bookings') ?? [];
+      final idStr = widget.bookingId.toString();
+      if (!list.contains(idStr)) {
+        list.add(idStr);
+        await prefs.setStringList('renter_confirmed_checkin_bookings', list);
+      }
+    } catch (_) {}
+  }
+
   Future<void> _handleConfirmReceipt() async {
     final checkInId = _comparison?.checkIn?.id;
     if (checkInId == null || checkInId == 0) {
@@ -123,6 +137,7 @@ class _CheckInReviewScreenState extends State<CheckInReviewScreen> {
       if (!mounted) return;
 
       if (ok) {
+        await _recordCheckInConfirmed();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Bạn đã xác nhận biên bản nhận xe thành công!'),
@@ -130,6 +145,7 @@ class _CheckInReviewScreenState extends State<CheckInReviewScreen> {
           ),
         );
         _fetchCheckIn();
+        Navigator.pop(context, true);
       } else {
         // Fallback thử nghiệm cục bộ
         setState(() {
@@ -168,6 +184,8 @@ class _CheckInReviewScreenState extends State<CheckInReviewScreen> {
             backgroundColor: AppColors.success,
           ),
         );
+        await _recordCheckInConfirmed();
+        Navigator.pop(context, true);
       }
     } finally {
       if (mounted) setState(() => _isConfirming = false);
