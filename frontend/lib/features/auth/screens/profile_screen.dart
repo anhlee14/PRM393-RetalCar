@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/network/api_client.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/services/auth_service.dart';
+import '../../../data/services/file_upload_service.dart';
 import '../../vehicle_management/screens/owner_vehicle_list_screen.dart';
 import 'login_screen.dart';
 
@@ -33,6 +35,95 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
+  void _changeAvatar() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Cập nhật ảnh đại diện',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined, color: AppColors.primary),
+                title: const Text('Chụp ảnh mới'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _uploadAndSaveAvatar(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined, color: AppColors.primary),
+                title: const Text('Chọn ảnh từ thư viện'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _uploadAndSaveAvatar(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _uploadAndSaveAvatar(ImageSource source) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+            SizedBox(width: 12),
+            Text('Đang tải ảnh...'),
+          ],
+        ),
+        duration: Duration(seconds: 10),
+      ),
+    );
+
+    final res = await FileUploadService.pickAndUpload(source: source, folder: 'avatars');
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    if (res['success'] == true) {
+      final newUrl = res['url'];
+      final updateRes = await AuthService.updateProfile(avatarUrl: newUrl);
+      if (!mounted) return;
+
+      if (updateRes['success'] == true) {
+        _loadProfile();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cập nhật ảnh đại diện thành công!'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(updateRes['message'] ?? 'Cập nhật ảnh thất bại'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    } else if (res['message'] != 'Đã hủy chọn ảnh') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['message'] ?? 'Tải ảnh thất bại'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+    }
+  }
+
   void _showEditProfileSheet() {
     if (_user == null) return;
 
@@ -40,7 +131,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final phoneController = TextEditingController(text: _user!.phone);
     final cccdController = TextEditingController(text: _user!.cccdNumber ?? '');
     final licenseController = TextEditingController(text: _user!.driverLicense ?? '');
-    final avatarController = TextEditingController(text: _user!.avatarUrl ?? '');
     bool isSaving = false;
 
     showModalBottomSheet(
@@ -97,16 +187,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 12),
                 TextField(
-                  controller: avatarController,
-                  decoration: const InputDecoration(
-                    labelText: 'Link ảnh đại diện (Avatar URL)',
-                    hintText: 'https://...',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.image_outlined),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
                   controller: cccdController,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
@@ -135,7 +215,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           final res = await AuthService.updateProfile(
                             fullName: nameController.text.trim(),
                             phone: phoneController.text.trim(),
-                            avatarUrl: avatarController.text.trim().isEmpty ? null : avatarController.text.trim(),
                             cccdNumber: cccdController.text.trim().isEmpty ? null : cccdController.text.trim(),
                             driverLicense: licenseController.text.trim().isEmpty ? null : licenseController.text.trim(),
                           );
@@ -288,7 +367,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     bottom: 0,
                     right: 0,
                     child: InkWell(
-                      onTap: _showEditProfileSheet,
+                      onTap: _changeAvatar,
                       child: const CircleAvatar(
                         radius: 14,
                         backgroundColor: AppColors.primary,
@@ -311,7 +390,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              'SĐT: ${_user!.phone}',
+              'SĐT: ${_user!.phone.isEmpty ? 'Chưa cập nhật' : _user!.phone}',
               style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
             const SizedBox(height: 20),

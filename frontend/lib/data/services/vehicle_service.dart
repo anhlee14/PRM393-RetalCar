@@ -26,6 +26,63 @@ class VehicleService {
     return [];
   }
 
+  static Future<VehicleModel?> getVehicleById(int id) async {
+    final response = await ApiClient.get(ApiEndpoints.vehicleDetail(id));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (data['success'] == true && data['data'] != null) {
+        return VehicleModel.fromJson(data['data']);
+      }
+    }
+    return null;
+  }
+
+  // Feature 4: Gọi API Matching tìm xe theo tỉ lệ % khớp (Type-safe Model cho ExploreScreen)
+  static Future<List<VehicleMatchModel>> searchMatchingVehicles({
+    double? budget,
+    bool needDriver = false,
+    double? userLat,
+    double? userLng,
+    String? vehicleType,
+    double budgetWeight = 0.25,
+    double distanceWeight = 0.20,
+    double driverWeight = 0.30,
+    double typeWeight = 0.15,
+    double ratingWeight = 0.10,
+  }) async {
+    final body = {
+      'need_driver': needDriver,
+      'user_lat': userLat ?? 21.0131,
+      'user_lng': userLng ?? 105.5255,
+      'budget_weight': budgetWeight,
+      'distance_weight': distanceWeight,
+      'driver_weight': driverWeight,
+      'type_weight': typeWeight,
+      'rating_weight': ratingWeight,
+    };
+    if (budget != null && budget > 0) {
+      body['budget'] = budget;
+    }
+    if (vehicleType != null && vehicleType.isNotEmpty && vehicleType != 'ALL') {
+      body['vehicle_type'] = vehicleType;
+    }
+
+    final response = await ApiClient.post(
+      ApiEndpoints.matchVehicles,
+      body: body,
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (data['success'] == true && data['data'] != null) {
+        return (data['data'] as List)
+            .map((e) => VehicleMatchModel.fromJson(e))
+            .toList();
+      }
+    }
+    return [];
+  }
+
   // Tạo xe mới (kèm cấu hình có tài xế)
   static Future<Map<String, dynamic>> createVehicle({
     required String name,
@@ -152,63 +209,6 @@ class VehicleService {
     } catch (e) {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
-  }
-
-  static Future<VehicleModel?> getVehicleById(int id) async {
-    final response = await ApiClient.get(ApiEndpoints.vehicleDetail(id));
-    if (response.statusCode == 200) {
-      final data = jsonDecode(utf8.decode(response.bodyBytes));
-      if (data['success'] == true && data['data'] != null) {
-        return VehicleModel.fromJson(data['data']);
-      }
-    }
-    return null;
-  }
-
-  // Feature 4: Gọi API Matching tìm xe theo tỉ lệ % khớp (Type-safe Model)
-  static Future<List<VehicleMatchModel>> searchMatchingVehicles({
-    double? budget,
-    bool needDriver = false,
-    double? userLat,
-    double? userLng,
-    String? vehicleType,
-    double budgetWeight = 0.25,
-    double distanceWeight = 0.20,
-    double driverWeight = 0.30,
-    double typeWeight = 0.15,
-    double ratingWeight = 0.10,
-  }) async {
-    final body = {
-      'need_driver': needDriver,
-      'user_lat': userLat ?? 21.0131,
-      'user_lng': userLng ?? 105.5255,
-      'budget_weight': budgetWeight,
-      'distance_weight': distanceWeight,
-      'driver_weight': driverWeight,
-      'type_weight': typeWeight,
-      'rating_weight': ratingWeight,
-    };
-    if (budget != null && budget > 0) {
-      body['budget'] = budget;
-    }
-    if (vehicleType != null && vehicleType.isNotEmpty && vehicleType != 'ALL') {
-      body['vehicle_type'] = vehicleType;
-    }
-
-    final response = await ApiClient.post(
-      ApiEndpoints.matchVehicles,
-      body: body,
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(utf8.decode(response.bodyBytes));
-      if (data['success'] == true && data['data'] != null) {
-        return (data['data'] as List)
-            .map((e) => VehicleMatchModel.fromJson(e))
-            .toList();
-      }
-    }
-    return [];
   }
 
   // Feature 4: Gọi API Matching tìm xe theo tỉ lệ % khớp (Raw Map)

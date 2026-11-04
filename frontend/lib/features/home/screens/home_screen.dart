@@ -491,12 +491,13 @@ class _HomeScreenState extends State<HomeScreen> {
       case 0:
         return _buildHomeContent();
       case 1:
-        return const ExploreScreen();
+        return const ExploreScreen(); // Tab 2: Khám phá xe & Matching %
       case 2:
-        return const BookingHistoryScreen();
+        return const BookingHistoryScreen(); // Tab 3: Xe đã thuê / Đơn thuê
+
       case 3:
       default:
-        return const ProfileScreen();
+        return const ProfileScreen(); // Tab 4: Tài khoản cá nhân
     }
   }
 
@@ -509,6 +510,7 @@ class _HomeScreenState extends State<HomeScreen> {
               actions: [
                 IconButton(
                   icon: const Icon(Icons.notifications_outlined),
+                  tooltip: 'Thông báo',
                   onPressed: () {
                     Navigator.push(
                       context,

@@ -16,6 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController(text: '123456');
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
 
   @override
   void dispose() {
@@ -70,6 +71,40 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _handleGoogleLogin() async {
+    setState(() => _isGoogleLoading = true);
+    final result = await AuthService.loginWithGoogle();
+    if (!mounted) return;
+    setState(() => _isGoogleLoading = false);
+
+    if (result['success'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đăng nhập Google thành công!'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context, true);
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (ctx) => const HomeScreen()),
+        );
+      }
+    } else {
+      if (result['message'] != 'Đã hủy đăng nhập Google') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Đăng nhập Google thất bại'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     }
   }
@@ -135,7 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 24),
 
               ElevatedButton(
-                onPressed: _isLoading ? null : _handleLogin,
+                onPressed: (_isLoading || _isGoogleLoading) ? null : _handleLogin,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
@@ -153,6 +188,62 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                       ),
               ),
+              const SizedBox(height: 20),
+
+              // Đường kẻ phân cách
+              Row(
+                children: [
+                  Expanded(child: Divider(color: Colors.grey.shade300, thickness: 1)),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      'Hoặc',
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                    ),
+                  ),
+                  Expanded(child: Divider(color: Colors.grey.shade300, thickness: 1)),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // Nút Đăng nhập bằng Google / Gmail
+              OutlinedButton(
+                onPressed: (_isLoading || _isGoogleLoading) ? null : _handleGoogleLogin,
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: BorderSide(color: Colors.grey.shade300, width: 1.2),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  backgroundColor: Colors.white,
+                ),
+                child: _isGoogleLoading
+                    ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.red.shade50,
+                            ),
+                            child: const Icon(Icons.mail_outline, color: Colors.red, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text(
+                            'Tiếp tục với Google (Gmail)',
+                            style: TextStyle(
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
               const SizedBox(height: 16),
 
               Row(
@@ -160,11 +251,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   const Text('Chưa có tài khoản?'),
                   TextButton(
-                    onPressed: () {
-                      Navigator.push(
+                    onPressed: () async {
+                      final registeredEmail = await Navigator.push<String>(
                         context,
                         MaterialPageRoute(builder: (ctx) => const RegisterScreen()),
                       );
+                      if (registeredEmail != null && mounted) {
+                        setState(() {
+                          _emailController.text = registeredEmail;
+                        });
+                      }
                     },
                     child: const Text('Đăng ký ngay', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),

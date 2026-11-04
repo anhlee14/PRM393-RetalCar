@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../data/services/file_upload_service.dart';
 import '../../../data/services/vehicle_service.dart';
 
 class AddVehicleScreen extends StatefulWidget {
@@ -32,6 +34,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   // Feature 1: Nghiệp vụ đặc thù 1 - Tùy chọn kèm tài xế
   bool _hasDriverOption = true;
   bool _isLoading = false;
+  bool _isUploadingImage = false;
 
   final List<String> _brands = [
     'VinFast',
@@ -127,6 +130,32 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     setState(() {
       _thumbnailController.text = url;
     });
+  }
+
+  Future<void> _pickAndUploadImage(ImageSource source) async {
+    setState(() => _isUploadingImage = true);
+    final res = await FileUploadService.pickAndUpload(source: source, folder: 'vehicles');
+    if (!mounted) return;
+    setState(() => _isUploadingImage = false);
+
+    if (res['success'] == true) {
+      setState(() {
+        _thumbnailController.text = res['url'];
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tải ảnh xe thành công!'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } else if (res['message'] != 'Đã hủy chọn ảnh') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['message'] ?? 'Tải ảnh thất bại'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+    }
   }
 
   @override
@@ -283,7 +312,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                     child: TextFormField(
                       controller: _addressController,
                       decoration: const InputDecoration(
-                        labelText: 'Địa chỉ nhận xe (VD: Hòa Lạc, Hà Nội)',
+                        labelText: 'Địa chỉ nhận xe',
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.location_on_outlined),
                       ),
@@ -296,7 +325,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
               // Giá thuê & Phụ phí tài xế (Feature 1)
               const Text(
-                '2. Thiết Lập Giá & Dịch Vụ Tài Xế (Nghiệp vụ đặc thù 1)',
+                '2. Thiết Lập Giá & Dịch Vụ Tài Xế',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
               ),
               const SizedBox(height: 12),
@@ -381,6 +410,79 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
               const Text(
                 '3. Hình Ảnh & Mô Tả',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
+              ),
+              const SizedBox(height: 12),
+
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Column(
+                  children: [
+                    if (_thumbnailController.text.isNotEmpty)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          _thumbnailController.text,
+                          height: 160,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            height: 120,
+                            color: Colors.grey.shade200,
+                            child: const Center(
+                              child: Icon(Icons.broken_image, size: 48, color: Colors.grey),
+                            ),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 10),
+                    if (_isUploadingImage)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                            SizedBox(width: 10),
+                            Text('Đang tải ảnh lên...', style: TextStyle(fontSize: 13, color: AppColors.primary)),
+                          ],
+                        ),
+                      )
+                    else
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => _pickAndUploadImage(ImageSource.gallery),
+                              icon: const Icon(Icons.photo_library_outlined, size: 18),
+                              label: const Text('Thư viện ảnh'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _pickAndUploadImage(ImageSource.camera),
+                              icon: const Icon(Icons.camera_alt_outlined, size: 18),
+                              label: const Text('Chụp ảnh'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
               ),
               const SizedBox(height: 12),
 
