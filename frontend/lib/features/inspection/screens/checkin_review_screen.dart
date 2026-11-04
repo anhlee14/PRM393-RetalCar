@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/inspection_model.dart';
 import '../../../data/services/inspection_service.dart';
+import '../../../data/services/payment_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CheckInReviewScreen extends StatefulWidget {
@@ -84,6 +85,24 @@ class _CheckInReviewScreenState extends State<CheckInReviewScreen> {
   }
 
   Future<void> _handleConfirmReceipt() async {
+    final prefs = await SharedPreferences.getInstance();
+    final remainingList = prefs.getStringList('paid_remaining_bookings') ?? [];
+    final isRemPaid = remainingList.contains(widget.bookingId.toString());
+    if (!isRemPaid && widget.bookingId != 0 && widget.bookingId != 999) {
+      final detailed = await PaymentService.checkPaymentStatusDetailed(widget.bookingId);
+      if (detailed['is_remaining_paid'] != true) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Vui lòng thanh toán số tiền thuê còn lại (70%) trước khi nhận bàn giao xe!'),
+            backgroundColor: AppColors.danger,
+            duration: Duration(seconds: 4),
+          ),
+        );
+        return;
+      }
+    }
+
     final checkInId = _comparison?.checkIn?.id;
     if (checkInId == null || checkInId == 0) {
       ScaffoldMessenger.of(context).showSnackBar(

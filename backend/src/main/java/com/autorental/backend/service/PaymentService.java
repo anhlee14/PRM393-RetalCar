@@ -43,7 +43,7 @@ public class PaymentService {
         Payment saved = paymentRepository.save(payment);
 
         // Gửi thông báo thanh toán
-        String typeLabel = "DEPOSIT".equals(request.getPaymentType()) ? "đặt cọc" : "thanh toán";
+        String typeLabel = "DEPOSIT".equals(request.getPaymentType()) ? "đặt cọc (30%)" : "tiền thuê còn lại (70%)";
         notificationService.createNotification(
                 booking.getVehicle().getOwner(),
                 "Thanh toán " + typeLabel + " thành công",
@@ -64,6 +64,12 @@ public class PaymentService {
     public boolean isBookingDepositPaid(Long bookingId) {
         List<Payment> list = paymentRepository.findByBookingId(bookingId);
         return list.stream().anyMatch(p -> "DEPOSIT".equalsIgnoreCase(p.getPaymentType()) && "SUCCESS".equalsIgnoreCase(p.getStatus()));
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isBookingRemainingPaid(Long bookingId) {
+        List<Payment> list = paymentRepository.findByBookingId(bookingId);
+        return list.stream().anyMatch(p -> ("REMAINING".equalsIgnoreCase(p.getPaymentType()) || "FINAL_PAYMENT".equalsIgnoreCase(p.getPaymentType())) && "SUCCESS".equalsIgnoreCase(p.getStatus()));
     }
 
     @Transactional
@@ -138,22 +144,37 @@ public class PaymentService {
 
         Booking booking = bookingOpt.get();
 
-        // 5. Kiểm tra xem đơn này đã có thanh toán DEPOSIT thành công chưa
+        // 5. Kiểm tra các giao dịch thanh toán trước đó của đơn này
         List<Payment> existingPayments = paymentRepository.findByBookingId(booking.getId());
-        Optional<Payment> existingDeposit = existingPayments.stream()
-                .filter(p -> "DEPOSIT".equalsIgnoreCase(p.getPaymentType()) && "SUCCESS".equalsIgnoreCase(p.getStatus()))
-                .findFirst();
+        boolean hasDeposit = existingPayments.stream()
+                .anyMatch(p -> "DEPOSIT".equalsIgnoreCase(p.getPaymentType()) && "SUCCESS".equalsIgnoreCase(p.getStatus()));
+        boolean hasRemaining = existingPayments.stream()
+                .anyMatch(p -> ("REMAINING".equalsIgnoreCase(p.getPaymentType()) || "FINAL_PAYMENT".equalsIgnoreCase(p.getPaymentType())) && "SUCCESS".equalsIgnoreCase(p.getStatus()));
 
-        if (existingDeposit.isPresent()) {
-            log.info("Đơn #{} đã được ghi nhận cọc trước đó", booking.getId());
-            return existingDeposit.get();
+        if (hasDeposit && hasRemaining) {
+            log.info("Đơn #{} đã hoàn tất thanh toán cả cọc và tiền còn lại", booking.getId());
+            return existingPayments.get(0);
+        }
+
+        String paymentType = hasDeposit ? "REMAINING" : "DEPOSIT";
+        String typeLabel = hasDeposit ? "tiền thuê còn lại (70%)" : "tiền cọc (30%)";
+
+        BigDecimal defaultAmount = BigDecimal.ZERO;
+        if (hasDeposit) {
+            if (booking.getTotalPrice() != null && booking.getDepositAmount() != null) {
+                defaultAmount = booking.getTotalPrice().subtract(booking.getDepositAmount());
+            } else if (booking.getTotalPrice() != null) {
+                defaultAmount = booking.getTotalPrice().multiply(BigDecimal.valueOf(0.7));
+            }
+        } else {
+            defaultAmount = booking.getDepositAmount() != null ? booking.getDepositAmount() : BigDecimal.ZERO;
         }
 
         Payment payment = Payment.builder()
                 .booking(booking)
                 .user(booking.getRenter())
-                .amount(amount.compareTo(BigDecimal.ZERO) > 0 ? amount : (booking.getDepositAmount() != null ? booking.getDepositAmount() : BigDecimal.ZERO))
-                .paymentType("DEPOSIT")
+                .amount(amount.compareTo(BigDecimal.ZERO) > 0 ? amount : defaultAmount)
+                .paymentType(paymentType)
                 .paymentMethod("BANK_TRANSFER_QR")
                 .status("SUCCESS")
                 .build();
@@ -162,13 +183,13 @@ public class PaymentService {
 
         notificationService.createNotification(
                 booking.getVehicle().getOwner(),
-                "Thanh toán cọc tự động thành công",
-                "Khách hàng đã chuyển khoản cọc " + saved.getAmount() + " đ cho đơn #" + booking.getId(),
+                "Thanh toán " + typeLabel + " tự động thành công",
+                "Khách hàng đã chuyển khoản " + typeLabel + " " + saved.getAmount() + " đ cho đơn #" + booking.getId(),
                 NotificationType.PAYMENT_UPDATE,
                 booking.getId()
         );
 
-        log.info("Xử lý thanh toán cọc SePay thành công cho đơn #{}", booking.getId());
+        log.info("Xử lý thanh toán {} SePay thành công cho đơn #{}", paymentType, booking.getId());
         return saved;
     }
 }
