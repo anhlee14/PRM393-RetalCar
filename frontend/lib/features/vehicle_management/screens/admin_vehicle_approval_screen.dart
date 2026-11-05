@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/vehicle_model.dart';
+import '../../../data/services/auth_service.dart';
 import '../../../data/services/vehicle_service.dart';
 
 class AdminVehicleApprovalScreen extends StatefulWidget {
@@ -30,6 +31,15 @@ class _AdminVehicleApprovalScreenState extends State<AdminVehicleApprovalScreen>
     });
 
     try {
+      final currentUser = await AuthService.getCurrentUser();
+      if (currentUser == null || currentUser.role != 'ROLE_ADMIN') {
+        if (!mounted) return;
+        setState(() {
+          _errorMessage = 'Truy cập bị từ chối: Chỉ Quản trị viên (Admin) mới có quyền phê duyệt xe đăng ký!';
+          _isLoading = false;
+        });
+        return;
+      }
       final list = await VehicleService.getPendingVehicles();
       if (!mounted) return;
       setState(() {

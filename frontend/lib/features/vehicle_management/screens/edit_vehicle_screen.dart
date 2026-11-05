@@ -65,7 +65,9 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
     _addressController = TextEditingController(text: v.address ?? '');
     _descriptionController = TextEditingController(text: v.description ?? '');
     _thumbnailController = TextEditingController(text: v.thumbnailUrl ?? '');
-    if (v.thumbnailUrl != null && v.thumbnailUrl!.isNotEmpty) {
+    if (v.imageUrls.isNotEmpty) {
+      _imageUrls.addAll(v.imageUrls);
+    } else if (v.thumbnailUrl != null && v.thumbnailUrl!.isNotEmpty) {
       _imageUrls.add(v.thumbnailUrl!);
     }
 

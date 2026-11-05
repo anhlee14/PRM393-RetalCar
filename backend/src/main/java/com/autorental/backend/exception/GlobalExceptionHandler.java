@@ -50,15 +50,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
+        StringBuilder firstMsg = new StringBuilder();
         ex.getBindingResult().getAllErrors().forEach((error) -> {
-            String fieldName = ((FieldError) error).getField();
+            String fieldName = error instanceof FieldError ? ((FieldError) error).getField() : "field";
             String errorMessage = error.getDefaultMessage();
             errors.put(fieldName, errorMessage);
+            if (firstMsg.length() == 0 && errorMessage != null) {
+                firstMsg.append(errorMessage);
+            }
         });
 
         Map<String, Object> body = new HashMap<>();
+        body.put("success", false);
         body.put("status", HttpStatus.BAD_REQUEST.value());
         body.put("error", "Validation Error");
+        body.put("message", firstMsg.length() > 0 ? firstMsg.toString() : "Dữ liệu đầu vào không hợp lệ");
         body.put("errors", errors);
         body.put("timestamp", LocalDateTime.now());
 
@@ -76,4 +82,3 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(err, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
-

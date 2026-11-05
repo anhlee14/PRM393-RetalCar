@@ -37,7 +37,7 @@ public class User {
     private String password;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 50, columnDefinition = "VARCHAR(50)")
     @Builder.Default
     private Role role = Role.ROLE_RENTER;
 
@@ -45,6 +45,7 @@ public class User {
 
     private String driverLicense;
 
+    @Column(columnDefinition = "TEXT")
     private String avatarUrl;
 
     @Builder.Default

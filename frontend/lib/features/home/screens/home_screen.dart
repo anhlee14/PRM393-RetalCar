@@ -122,12 +122,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: CircleAvatar(
                     radius: 22,
                     backgroundColor: AppColors.primary.withAlpha(40),
-                    backgroundImage: (_currentUser?.avatarUrl != null && _currentUser!.avatarUrl!.isNotEmpty)
-                        ? NetworkImage(_currentUser!.avatarUrl!)
-                        : null,
-                    child: (_currentUser?.avatarUrl == null || _currentUser!.avatarUrl!.isEmpty)
-                        ? const Icon(Icons.person, color: AppColors.primary)
-                        : null,
+                    child: (_currentUser?.avatarUrl != null && _currentUser!.avatarUrl!.isNotEmpty)
+                        ? ClipOval(
+                            child: Image.network(
+                              ApiEndpoints.resolveImageUrl(_currentUser!.avatarUrl!),
+                              width: 44,
+                              height: 44,
+                              fit: BoxFit.cover,
+                              errorBuilder: (ctx, err, stack) =>
+                                  const Icon(Icons.person, color: AppColors.primary),
+                            ),
+                          )
+                        : const Icon(Icons.person, color: AppColors.primary),
                   ),
                 ),
               ],

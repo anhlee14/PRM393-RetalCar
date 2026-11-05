@@ -1,4 +1,5 @@
 import '../../data/models/vehicle_model.dart';
+import '../constants/api_endpoints.dart';
 
 class VehicleImageHelper {
   // Ảnh chuẩn 100% đúng dòng xe, chất lượng cao
@@ -30,27 +31,42 @@ class VehicleImageHelper {
   static const String xpanderInterior =
       'https://images.unsplash.com/photo-1503376780353-7e6692767b70';
 
-  // Lấy ảnh đại diện chính xác tuyệt đối theo tên và hãng xe
+  // Lấy ảnh đại diện chính xác theo xe đã đăng tải hoặc ảnh mẫu
   static String getThumbnail(VehicleModel vehicle) {
     final name = vehicle.name.toLowerCase();
     final brand = vehicle.brand.toLowerCase();
-    final url = vehicle.thumbnailUrl?.trim() ?? '';
+    final url = vehicle.thumbnailUrl?.trim() ??
+        (vehicle.imageUrls.isNotEmpty ? vehicle.imageUrls.first.trim() : '');
 
-    // Nếu ảnh trong DB là link upload local bị 404 hoặc link unsplash ngẫu nhiên bị sai dòng xe
-    final isBrokenLocal = url.contains('localhost:8080/uploads');
     final isMismatchedUnsplash = url.contains('photo-1549399542-7e3f8b79c341') ||
         url.contains('photo-1580273916550-e323be2ae537') ||
         url.contains('photo-1533473359331-0135ef1b58bf');
 
-    if (url.isEmpty || isBrokenLocal || isMismatchedUnsplash) {
+    if (url.isEmpty || isMismatchedUnsplash) {
       return _matchAccurateImage(name, brand, vehicle.vehicleType);
     }
 
-    return url;
+    return ApiEndpoints.resolveImageUrl(url);
   }
 
   // Danh sách các góc ảnh thực tế của xe phục vụ màn hình chi tiết (Carousel)
   static List<String> getGalleryImages(VehicleModel vehicle) {
+    // 1. Ưu tiên danh sách ảnh thực tế chủ xe đã tải lên khi đăng ký xe
+    if (vehicle.imageUrls.isNotEmpty) {
+      return vehicle.imageUrls
+          .where((u) => u.trim().isNotEmpty)
+          .map((u) => ApiEndpoints.resolveImageUrl(u))
+          .toList();
+    }
+
+    // 2. Nếu có thumbnailUrl riêng do chủ xe tải lên (Cloudinary hoặc /uploads/)
+    final rawThumb = vehicle.thumbnailUrl?.trim() ?? '';
+    if (rawThumb.isNotEmpty &&
+        (rawThumb.contains('cloudinary.com') || rawThumb.contains('/uploads/'))) {
+      return [ApiEndpoints.resolveImageUrl(rawThumb)];
+    }
+
+    // 3. Fallback bộ ảnh mẫu cho các dòng xe có sẵn
     final name = vehicle.name.toLowerCase();
     final brand = vehicle.brand.toLowerCase();
 

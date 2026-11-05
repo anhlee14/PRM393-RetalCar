@@ -268,7 +268,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Gợi ý test: renter@gmail.com / 123456 hoặc owner@gmail.com / 123456',
+                'Gợi ý test: admin@gmail.com / 123456 | owner@gmail.com / 123456 | renter@gmail.com / 123456',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
               )

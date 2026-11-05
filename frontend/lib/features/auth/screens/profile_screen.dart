@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../core/constants/api_endpoints.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/network/api_client.dart';
 import '../../../data/models/user_model.dart';
@@ -358,12 +359,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   CircleAvatar(
                     radius: 46,
                     backgroundColor: AppColors.primary.withAlpha(40),
-                    backgroundImage: (_user!.avatarUrl != null && _user!.avatarUrl!.isNotEmpty)
-                        ? NetworkImage(_user!.avatarUrl!)
-                        : null,
-                    child: (_user!.avatarUrl == null || _user!.avatarUrl!.isEmpty)
-                        ? const Icon(Icons.person, size: 54, color: AppColors.primary)
-                        : null,
+                    child: (_user!.avatarUrl != null && _user!.avatarUrl!.isNotEmpty)
+                        ? ClipOval(
+                            child: Image.network(
+                              ApiEndpoints.resolveImageUrl(_user!.avatarUrl!),
+                              width: 92,
+                              height: 92,
+                              fit: BoxFit.cover,
+                              errorBuilder: (ctx, err, stack) =>
+                                  const Icon(Icons.person, size: 54, color: AppColors.primary),
+                            ),
+                          )
+                        : const Icon(Icons.person, size: 54, color: AppColors.primary),
                   ),
                   Positioned(
                     bottom: 0,

@@ -24,12 +24,28 @@ public class VehicleService {
 
     @Transactional
     public Vehicle createVehicle(User owner, VehicleRequest request) {
+        String normalizedPlate = request.getLicensePlate() != null
+                ? request.getLicensePlate().trim().toUpperCase()
+                : "";
+        if (normalizedPlate.isEmpty()) {
+            throw new BadRequestException("Biển số xe không được để trống!");
+        }
+        if (vehicleRepository.existsByLicensePlate(normalizedPlate)) {
+            throw new BadRequestException("Biển số xe '" + normalizedPlate + "' đã tồn tại trên hệ thống!");
+        }
+
+        String thumbUrl = request.getThumbnailUrl();
+        if ((thumbUrl == null || thumbUrl.trim().isEmpty())
+                && request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
+            thumbUrl = request.getImageUrls().get(0);
+        }
+
         Vehicle vehicle = Vehicle.builder()
                 .owner(owner)
-                .name(request.getName())
-                .brand(request.getBrand())
-                .modelYear(request.getModelYear())
-                .licensePlate(request.getLicensePlate())
+                .name(request.getName().trim())
+                .brand(request.getBrand().trim())
+                .modelYear(request.getModelYear() != null ? request.getModelYear() : 2024)
+                .licensePlate(normalizedPlate)
                 .vehicleType(request.getVehicleType())
                 .transmission(request.getTransmission())
                 .fuelType(request.getFuelType())
@@ -40,10 +56,10 @@ public class VehicleService {
                 .seats(request.getSeats() != null ? request.getSeats() : 4)
                 .description(request.getDescription())
                 .address(request.getAddress())
-                .currentLat(request.getCurrentLat())
-                .currentLng(request.getCurrentLng())
+                .currentLat(request.getCurrentLat() != null ? request.getCurrentLat() : 21.0131)
+                .currentLng(request.getCurrentLng() != null ? request.getCurrentLng() : 105.5255)
                 .status(VehicleStatus.PENDING_APPROVAL)
-                .thumbnailUrl(request.getThumbnailUrl())
+                .thumbnailUrl(thumbUrl)
                 .build();
 
         Vehicle savedVehicle = vehicleRepository.save(vehicle);
@@ -53,14 +69,18 @@ public class VehicleService {
             List<VehicleImage> images = new ArrayList<>();
             for (int i = 0; i < request.getImageUrls().size(); i++) {
                 String imgUrl = request.getImageUrls().get(i);
-                images.add(VehicleImage.builder()
-                        .vehicle(savedVehicle)
-                        .imageUrl(imgUrl)
-                        .isThumbnail(i == 0)
-                        .build());
+                if (imgUrl != null && !imgUrl.trim().isEmpty()) {
+                    images.add(VehicleImage.builder()
+                            .vehicle(savedVehicle)
+                            .imageUrl(imgUrl.trim())
+                            .isThumbnail(i == 0)
+                            .build());
+                }
             }
-            vehicleImageRepository.saveAll(images);
-            savedVehicle.setImages(images);
+            if (!images.isEmpty()) {
+                vehicleImageRepository.saveAll(images);
+                savedVehicle.setImages(images);
+            }
         }
 
         return savedVehicle;
@@ -74,10 +94,17 @@ public class VehicleService {
             throw new BadRequestException("Bạn không có quyền chỉnh sửa xe này!");
         }
 
-        vehicle.setName(request.getName());
-        vehicle.setBrand(request.getBrand());
+        String normalizedPlate = request.getLicensePlate() != null
+                ? request.getLicensePlate().trim().toUpperCase()
+                : vehicle.getLicensePlate();
+        if (vehicleRepository.existsByLicensePlateAndIdNot(normalizedPlate, vehicleId)) {
+            throw new BadRequestException("Biển số xe '" + normalizedPlate + "' đã được sử dụng bởi xe khác!");
+        }
+
+        vehicle.setName(request.getName().trim());
+        vehicle.setBrand(request.getBrand().trim());
         vehicle.setModelYear(request.getModelYear());
-        vehicle.setLicensePlate(request.getLicensePlate());
+        vehicle.setLicensePlate(normalizedPlate);
         vehicle.setVehicleType(request.getVehicleType());
         vehicle.setTransmission(request.getTransmission());
         vehicle.setFuelType(request.getFuelType());
@@ -87,8 +114,12 @@ public class VehicleService {
         vehicle.setSeats(request.getSeats() != null ? request.getSeats() : vehicle.getSeats());
         vehicle.setDescription(request.getDescription());
         vehicle.setAddress(request.getAddress());
-        vehicle.setCurrentLat(request.getCurrentLat());
-        vehicle.setCurrentLng(request.getCurrentLng());
+        if (request.getCurrentLat() != null) {
+            vehicle.setCurrentLat(request.getCurrentLat());
+        }
+        if (request.getCurrentLng() != null) {
+            vehicle.setCurrentLng(request.getCurrentLng());
+        }
         if (request.getThumbnailUrl() != null) {
             vehicle.setThumbnailUrl(request.getThumbnailUrl());
         }
@@ -97,11 +128,13 @@ public class VehicleService {
             vehicle.getImages().clear();
             for (int i = 0; i < request.getImageUrls().size(); i++) {
                 String imgUrl = request.getImageUrls().get(i);
-                vehicle.getImages().add(VehicleImage.builder()
-                        .vehicle(vehicle)
-                        .imageUrl(imgUrl)
-                        .isThumbnail(i == 0)
-                        .build());
+                if (imgUrl != null && !imgUrl.trim().isEmpty()) {
+                    vehicle.getImages().add(VehicleImage.builder()
+                            .vehicle(vehicle)
+                            .imageUrl(imgUrl.trim())
+                            .isThumbnail(i == 0)
+                            .build());
+                }
             }
         }
 

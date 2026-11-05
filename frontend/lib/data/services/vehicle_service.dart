@@ -212,18 +212,18 @@ class VehicleService {
   }
 
   // Admin duyệt xe cho thuê
-  // Admin t? ch?i duy?t xe
+  // Admin từ chối duyệt xe
   static Future<Map<String, dynamic>> rejectVehicle(int id) async {
     try {
       final response = await ApiClient.put(ApiEndpoints.rejectVehicle(id));
       final data = jsonDecode(utf8.decode(response.bodyBytes));
       if (response.statusCode == 200) {
-        return {'success': true, 'message': '? t? ch?i duy?t xe'};
+        return {'success': true, 'message': 'Đã từ chối duyệt xe'};
       } else {
-        return {'success': false, 'message': data['message'] ?? 'T? ch?i xe th?t b?i'};
+        return {'success': false, 'message': data['message'] ?? 'Từ chối xe thất bại'};
       }
     } catch (e) {
-      return {'success': false, 'message': 'L?i k?t n?i: $e'};
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
   }
 

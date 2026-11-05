@@ -321,7 +321,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                     child: TextFormField(
                       controller: _licensePlateController,
                       decoration: const InputDecoration(
-                        labelText: 'Biển số * (VD: 30K-888.88)',
+                        labelText: 'Biển số * (VD: 30A-123.45)',
                         border: OutlineInputBorder(),
                       ),
                       textCapitalization: TextCapitalization.characters,
