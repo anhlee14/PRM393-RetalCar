@@ -32,6 +32,7 @@ class _PhotoSlot {
   XFile? file;
   Uint8List? bytes;
   String? uploadedUrl;
+  bool isUploading = false;
 
   _PhotoSlot({
     required this.key,
@@ -95,7 +96,31 @@ class _PhotoInspectionScreenState extends State<PhotoInspectionScreen> {
         setState(() {
           _slots[index].file = picked;
           _slots[index].bytes = bytes;
+          _slots[index].isUploading = true;
+          _slots[index].uploadedUrl = null;
         });
+
+        // Tự động tải ảnh lên máy chủ ngay lập tức
+        try {
+          final url = await InspectionService.uploadPhoto(bytes, picked.name);
+          if (mounted) {
+            setState(() {
+              _slots[index].uploadedUrl = url;
+              _slots[index].isUploading = false;
+            });
+            if (url != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Tải ảnh ${_slots[index].title} lên máy chủ thành công!'),
+                  backgroundColor: AppColors.success,
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            }
+          }
+        } catch (_) {
+          if (mounted) setState(() => _slots[index].isUploading = false);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -107,6 +132,21 @@ class _PhotoInspectionScreenState extends State<PhotoInspectionScreen> {
         );
       }
     }
+  }
+
+  void _fillSamplePhotos() {
+    setState(() {
+      for (var slot in _slots) {
+        slot.uploadedUrl = _getDefaultSamplePhoto(slot.key, _isCheckIn);
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Đã nạp 6 ảnh mẫu chất lượng cao cho các góc chụp!'),
+        backgroundColor: AppColors.success,
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   void _showImageSourceSheet(int index) {
@@ -171,6 +211,7 @@ class _PhotoInspectionScreenState extends State<PhotoInspectionScreen> {
       _slots[index].file = null;
       _slots[index].bytes = null;
       _slots[index].uploadedUrl = null;
+      _slots[index].isUploading = false;
     });
   }
 
@@ -455,7 +496,7 @@ class _PhotoInspectionScreenState extends State<PhotoInspectionScreen> {
                   SizedBox(width: 8),
                   Text(
                     'Lưới 6 Góc Chụp Tiêu Chuẩn',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -477,6 +518,20 @@ class _PhotoInspectionScreenState extends State<PhotoInspectionScreen> {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: _fillSamplePhotos,
+              icon: const Icon(Icons.auto_fix_high_rounded, size: 14),
+              label: const Text('Dùng ảnh mẫu kiểm thử', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                foregroundColor: AppColors.primary,
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
           ),
           const SizedBox(height: 14),
 
@@ -502,7 +557,7 @@ class _PhotoInspectionScreenState extends State<PhotoInspectionScreen> {
   }
 
   Widget _buildPhotoTile(_PhotoSlot slot, int index) {
-    final hasImage = slot.bytes != null;
+    final hasImage = slot.bytes != null || slot.uploadedUrl != null;
 
     return InkWell(
       onTap: () => _showImageSourceSheet(index),
@@ -521,10 +576,9 @@ class _PhotoInspectionScreenState extends State<PhotoInspectionScreen> {
           children: [
             if (hasImage) ...[
               Positioned.fill(
-                child: Image.memory(
-                  slot.bytes!,
-                  fit: BoxFit.cover,
-                ),
+                child: slot.bytes != null
+                    ? Image.memory(slot.bytes!, fit: BoxFit.cover)
+                    : Image.network(slot.uploadedUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.image, color: Colors.grey))),
               ),
               Positioned(
                 top: 6,
@@ -541,18 +595,56 @@ class _PhotoInspectionScreenState extends State<PhotoInspectionScreen> {
                   ),
                 ),
               ),
-              Positioned(
-                top: 6,
-                left: 6,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: AppColors.success,
-                    shape: BoxShape.circle,
+              if (slot.isUploading)
+                Positioned(
+                  top: 6,
+                  left: 6,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.black54,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    ),
                   ),
-                  child: const Icon(Icons.check, color: Colors.white, size: 12),
+                )
+              else if (slot.uploadedUrl != null)
+                Positioned(
+                  top: 6,
+                  left: 6,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.success,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.cloud_done_rounded, color: Colors.white, size: 11),
+                        SizedBox(width: 2),
+                        Text('Đã tải', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Positioned(
+                  top: 6,
+                  left: 6,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: AppColors.success,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.check, color: Colors.white, size: 12),
+                  ),
                 ),
-              ),
             ] else ...[
               Center(
                 child: Padding(

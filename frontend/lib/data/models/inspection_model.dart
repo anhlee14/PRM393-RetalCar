@@ -1,3 +1,4 @@
+import '../../core/constants/api_endpoints.dart';
 class InspectionModel {
   final int id;
   final int bookingId;
@@ -31,17 +32,27 @@ class InspectionModel {
     required this.isConfirmedByOwner,
   });
 
+  static String? _resolveUrl(dynamic url) {
+    if (url == null) return null;
+    final str = url.toString().trim();
+    if (str.isEmpty) return null;
+    if (str.startsWith('/uploads/')) {
+      return '${ApiEndpoints.baseUrl}$str';
+    }
+    return str;
+  }
+
   factory InspectionModel.fromJson(Map<String, dynamic> json) {
     return InspectionModel(
       id: json['id'] ?? 0,
       bookingId: json['booking_id'] ?? json['bookingId'] ?? (json['booking'] != null ? json['booking']['id'] : 0),
       stage: json['stage'] ?? 'CHECK_IN',
-      frontImg: json['front_img'] ?? json['frontImg'],
-      rearImg: json['rear_img'] ?? json['rearImg'],
-      leftImg: json['left_img'] ?? json['leftImg'],
-      rightImg: json['right_img'] ?? json['rightImg'],
-      odoImg: json['odo_img'] ?? json['odoImg'],
-      fuelImg: json['fuel_img'] ?? json['fuelImg'],
+      frontImg: _resolveUrl(json['front_img'] ?? json['frontImg']),
+      rearImg: _resolveUrl(json['rear_img'] ?? json['rearImg']),
+      leftImg: _resolveUrl(json['left_img'] ?? json['leftImg']),
+      rightImg: _resolveUrl(json['right_img'] ?? json['rightImg']),
+      odoImg: _resolveUrl(json['odo_img'] ?? json['odoImg']),
+      fuelImg: _resolveUrl(json['fuel_img'] ?? json['fuelImg']),
       odoKm: (json['odo_km'] ?? json['odoKm'] as num?)?.toDouble(),
       fuelLevelPercent: (json['fuel_level_percent'] ?? json['fuelLevelPercent'] as num?)?.toDouble(),
       notes: json['notes'],

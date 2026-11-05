@@ -90,7 +90,11 @@ class ApiClient {
       if (res.statusCode == 200) {
         final data = jsonDecode(utf8.decode(res.bodyBytes));
         if (data['success'] == true && data['data'] != null) {
-          return data['data']['file_url'];
+          final fileUrl = data['data']['file_url'] as String?;
+          if (fileUrl != null && fileUrl.startsWith('/uploads/')) {
+            return '${ApiEndpoints.baseUrl}$fileUrl';
+          }
+          return fileUrl;
         }
       }
     } catch (_) {}
