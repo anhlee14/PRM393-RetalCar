@@ -14,6 +14,8 @@ import java.util.List;
 public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
     List<Vehicle> findByOwnerId(Long ownerId);
     List<Vehicle> findByStatus(VehicleStatus status);
+    boolean existsByLicensePlate(String licensePlate);
+    boolean existsByLicensePlateAndIdNot(String licensePlate, Long id);
 
     @Query("SELECT v FROM Vehicle v WHERE v.status = :status " +
            "AND (:vehicleType IS NULL OR v.vehicleType = :vehicleType) " +
@@ -22,4 +24,3 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
                                  @Param("vehicleType") VehicleType vehicleType,
                                  @Param("hasDriver") Boolean hasDriver);
 }
-

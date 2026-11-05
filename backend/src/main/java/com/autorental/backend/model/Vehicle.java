@@ -41,15 +41,15 @@ public class Vehicle {
     private String licensePlate;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 50, columnDefinition = "VARCHAR(50)")
     private VehicleType vehicleType;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 50, columnDefinition = "VARCHAR(50)")
     private TransmissionType transmission;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 50, columnDefinition = "VARCHAR(50)")
     private FuelType fuelType;
 
     @Column(nullable = false, precision = 12, scale = 2)
@@ -67,6 +67,7 @@ public class Vehicle {
     @Builder.Default
     private Integer seats = 4;
 
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     private String address;
@@ -82,10 +83,11 @@ public class Vehicle {
     private Integer totalReviews = 0;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 50, columnDefinition = "VARCHAR(50)")
     @Builder.Default
     private VehicleStatus status = VehicleStatus.AVAILABLE;
 
+    @Column(columnDefinition = "TEXT")
     private String thumbnailUrl;
 
     @OneToMany(mappedBy = "vehicle", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
@@ -99,4 +101,3 @@ public class Vehicle {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 }
-

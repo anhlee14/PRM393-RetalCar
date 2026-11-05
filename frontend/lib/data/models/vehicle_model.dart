@@ -22,6 +22,7 @@ class VehicleModel {
   final int totalReviews;
   final String status;
   final String? thumbnailUrl;
+  final List<String> imageUrls;
   final int? ownerId;
   final String? ownerName;
 
@@ -46,6 +47,7 @@ class VehicleModel {
     this.totalReviews = 0,
     required this.status,
     this.thumbnailUrl,
+    this.imageUrls = const [],
     this.ownerId,
     this.ownerName,
   });
@@ -62,6 +64,31 @@ class VehicleModel {
     } else if (json['ownerId'] != null) {
       parsedOwnerId = (json['ownerId'] as num?)?.toInt();
     }
+
+    final List<String> parsedImages = [];
+    if (json['images'] != null && json['images'] is List) {
+      for (final item in (json['images'] as List)) {
+        if (item is Map) {
+          final imgUrl = (item['image_url'] ?? item['imageUrl'])?.toString();
+          if (imgUrl != null && imgUrl.trim().isNotEmpty) {
+            parsedImages.add(imgUrl.trim());
+          }
+        } else if (item is String && item.trim().isNotEmpty) {
+          parsedImages.add(item.trim());
+        }
+      }
+    } else if (json['image_urls'] != null && json['image_urls'] is List) {
+      for (final item in (json['image_urls'] as List)) {
+        if (item != null && item.toString().trim().isNotEmpty) {
+          parsedImages.add(item.toString().trim());
+        }
+      }
+    }
+
+    final rawThumb = json['thumbnail_url']?.toString().trim();
+    final effectiveThumb = (rawThumb != null && rawThumb.isNotEmpty)
+        ? rawThumb
+        : (parsedImages.isNotEmpty ? parsedImages.first : null);
 
     return VehicleModel(
       id: json['id'] ?? 0,
@@ -83,7 +110,8 @@ class VehicleModel {
       averageRating: (json['average_rating'] as num?)?.toDouble() ?? 5.0,
       totalReviews: json['total_reviews'] ?? 0,
       status: json['status'] ?? 'AVAILABLE',
-      thumbnailUrl: json['thumbnail_url'],
+      thumbnailUrl: effectiveThumb,
+      imageUrls: parsedImages,
       ownerId: parsedOwnerId,
       ownerName: parsedOwnerName,
     );

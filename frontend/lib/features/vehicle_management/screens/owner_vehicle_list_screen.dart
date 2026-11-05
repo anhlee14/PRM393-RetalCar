@@ -137,22 +137,6 @@ class _OwnerVehicleListScreenState extends State<OwnerVehicleListScreen> {
     }
   }
 
-  void _handleApproveVehicle(VehicleModel vehicle) async {
-    final res = await VehicleService.approveVehicle(vehicle.id);
-    if (!mounted) return;
-
-    if (res['success'] == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Đã duyệt xe ${vehicle.name} thành công!'), backgroundColor: AppColors.success),
-      );
-      _fetchVehicles();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res['message'] ?? 'Lỗi khi duyệt xe'), backgroundColor: AppColors.danger),
-      );
-    }
-  }
-
   Widget _buildStatusChip(String status) {
     Color bg;
     Color text;
@@ -291,7 +275,6 @@ class _OwnerVehicleListScreenState extends State<OwnerVehicleListScreen> {
     );
   }
 
-  @override
   Widget _buildPendingOrdersBanner() {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -355,6 +338,7 @@ class _OwnerVehicleListScreenState extends State<OwnerVehicleListScreen> {
     );
   }
 
+  @override
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
@@ -528,12 +512,6 @@ class _OwnerVehicleListScreenState extends State<OwnerVehicleListScreen> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
-                                  if (v.status == 'PENDING_APPROVAL')
-                                    TextButton.icon(
-                                      onPressed: () => _handleApproveVehicle(v),
-                                      icon: const Icon(Icons.check_circle_outline, size: 18, color: Colors.green),
-                                      label: const Text('Duyệt xe (Demo)', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                                    ),
                                   TextButton.icon(
                                     onPressed: () => _navigateToEditVehicle(v),
                                     icon: const Icon(Icons.edit_outlined, size: 18),

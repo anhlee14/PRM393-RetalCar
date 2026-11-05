@@ -22,10 +22,9 @@ public class VehicleImage {
     @JsonIgnore
     private Vehicle vehicle;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String imageUrl;
 
     @Builder.Default
     private Boolean isThumbnail = false;
 }
-
