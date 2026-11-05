@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'core/constants/app_colors.dart';
-import 'features/auth/screens/login_screen.dart';
+import 'features/home/screens/home_screen.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const AutoRentalApp());
 }
 
@@ -27,7 +28,7 @@ class AutoRentalApp extends StatelessWidget {
           elevation: 0,
         ),
       ),
-      home: const LoginScreen(),
+      home: const HomeScreen(),
     );
   }
 }

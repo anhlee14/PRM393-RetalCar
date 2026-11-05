@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class GpsSnapshotResponse {
     private Long bookingId;
+    private String bookingStatus;
     private String vehicleName;
     private Double latitude;
     private Double longitude;
@@ -22,5 +23,5 @@ public class GpsSnapshotResponse {
     // Feature 2: Giới hạn 20 lần / ngày của chủ xe
     private Integer remainingChecksToday;
     private Integer totalAllowedPerDay;
+    private Boolean quotaConsumed;
 }
-

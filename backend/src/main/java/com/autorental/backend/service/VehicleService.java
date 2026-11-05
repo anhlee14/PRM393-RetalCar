@@ -42,7 +42,7 @@ public class VehicleService {
                 .address(request.getAddress())
                 .currentLat(request.getCurrentLat())
                 .currentLng(request.getCurrentLng())
-                .status(VehicleStatus.AVAILABLE)
+                .status(VehicleStatus.PENDING_APPROVAL)
                 .thumbnailUrl(request.getThumbnailUrl())
                 .build();
 
@@ -130,6 +130,11 @@ public class VehicleService {
     @Transactional(readOnly = true)
     public List<Vehicle> getOwnerVehicles(Long ownerId) {
         return vehicleRepository.findByOwnerId(ownerId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Vehicle> getPendingVehicles() {
+        return vehicleRepository.findByStatus(VehicleStatus.PENDING_APPROVAL);
     }
 
     @Transactional(readOnly = true)

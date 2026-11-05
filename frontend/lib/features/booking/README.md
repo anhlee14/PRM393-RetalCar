@@ -1,4 +1,4 @@
-# PHÂN HỆ: ĐẶT XE, THANH TOÁN CỌC & LỊCH SỬ CHUYẾN ĐI (BOOKING & CHECKOUT)
+ĐẶT XE, THANH TOÁN CỌC & LỊCH SỬ CHUYẾN ĐI (BOOKING & CHECKOUT)
 **Người phụ trách:** 👤 **Thành viên 2**  
 **Môn học:** PRM393 - Mobile Application Development (FPT University)  
 **Kiến trúc:** Feature-First Clean Architecture
@@ -43,8 +43,8 @@
   4. **Lựa chọn Phương thức Thanh toán (`RadioListTile`):**
      - **Phương thức 1: Chuyển khoản QR (VietQR):**
        - Hiển thị hình ảnh mã QR ngân hàng động.
-       - Tên chủ tài khoản: `NGUYEN VAN CHU XE`.
-       - Số tài khoản: `190366889999` (Ngân hàng Techcombank / MB).
+       - Tên chủ tài khoản: `NGUYEN THANH PHONG`.
+       - Số tài khoản: `69999968888` (Ngân hàng TMCP Quân Đội - MB Bank).
        - Cú pháp chuyển khoản: `AUTORENTAL BKXXXX`.
        - Nút *"Sao chép số tài khoản & nội dung"*.
      - **Phương thức 2: Ví điện tử MoMo / VNPay**.

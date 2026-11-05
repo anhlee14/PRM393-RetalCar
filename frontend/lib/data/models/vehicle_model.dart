@@ -22,6 +22,8 @@ class VehicleModel {
   final int totalReviews;
   final String status;
   final String? thumbnailUrl;
+  final int? ownerId;
+  final String? ownerName;
 
   VehicleModel({
     required this.id,
@@ -44,9 +46,23 @@ class VehicleModel {
     this.totalReviews = 0,
     required this.status,
     this.thumbnailUrl,
+    this.ownerId,
+    this.ownerName,
   });
 
   factory VehicleModel.fromJson(Map<String, dynamic> json) {
+    int? parsedOwnerId;
+    String? parsedOwnerName;
+    if (json['owner'] != null && json['owner'] is Map) {
+      final ownerMap = json['owner'] as Map;
+      parsedOwnerId = (ownerMap['id'] as num?)?.toInt();
+      parsedOwnerName = ownerMap['full_name'] ?? ownerMap['fullName'];
+    } else if (json['owner_id'] != null) {
+      parsedOwnerId = (json['owner_id'] as num?)?.toInt();
+    } else if (json['ownerId'] != null) {
+      parsedOwnerId = (json['ownerId'] as num?)?.toInt();
+    }
+
     return VehicleModel(
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
@@ -68,7 +84,36 @@ class VehicleModel {
       totalReviews: json['total_reviews'] ?? 0,
       status: json['status'] ?? 'AVAILABLE',
       thumbnailUrl: json['thumbnail_url'],
+      ownerId: parsedOwnerId,
+      ownerName: parsedOwnerName,
     );
   }
 }
 
+class VehicleMatchModel {
+  final VehicleModel vehicle;
+  final double matchScore;
+  final double? distanceKm;
+  final String matchLabel;
+  final Map<String, dynamic>? breakdownScores;
+
+  VehicleMatchModel({
+    required this.vehicle,
+    required this.matchScore,
+    this.distanceKm,
+    required this.matchLabel,
+    this.breakdownScores,
+  });
+
+  factory VehicleMatchModel.fromJson(Map<String, dynamic> json) {
+    return VehicleMatchModel(
+      vehicle: VehicleModel.fromJson(json['vehicle'] is Map<String, dynamic> ? json['vehicle'] : json),
+      matchScore: (json['match_score'] as num?)?.toDouble() ?? 0.0,
+      distanceKm: (json['distance_km'] as num?)?.toDouble(),
+      matchLabel: json['match_label'] ?? '',
+      breakdownScores: json['breakdown_scores'] != null
+          ? Map<String, dynamic>.from(json['breakdown_scores'])
+          : null,
+    );
+  }
+}

@@ -1,35 +1,23 @@
 package com.autorental.backend.service;
 
 import com.autorental.backend.exception.BadRequestException;
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.util.UUID;
+import java.util.Map;
 
 @Service
 @Slf4j
 public class FileStorageService {
 
-    private final Path fileStorageLocation;
+    private final Cloudinary cloudinary;
 
-    public FileStorageService(@Value("${file.upload-dir:uploads}") String uploadDir) {
-        this.fileStorageLocation = Paths.get(uploadDir).toAbsolutePath().normalize();
-        try {
-            Files.createDirectories(this.fileStorageLocation);
-            Files.createDirectories(this.fileStorageLocation.resolve("vehicles"));
-            Files.createDirectories(this.fileStorageLocation.resolve("inspections"));
-            Files.createDirectories(this.fileStorageLocation.resolve("avatars"));
-        } catch (IOException ex) {
-            throw new RuntimeException("Không thể khởi tạo thư mục lưu trữ file cục bộ", ex);
-        }
+    public FileStorageService(Cloudinary cloudinary) {
+        this.cloudinary = cloudinary;
     }
 
     public String storeFile(MultipartFile file, String subFolder) {
@@ -37,29 +25,19 @@ public class FileStorageService {
             throw new BadRequestException("File không được để trống");
         }
 
-        String originalFileName = file.getOriginalFilename();
-        String fileExtension = "";
-        if (originalFileName != null && originalFileName.contains(".")) {
-            fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
-        }
-
-        // Tạo tên file ngẫu nhiên để tránh trùng lặp
-        String fileName = UUID.randomUUID().toString() + fileExtension;
-
         try {
-            Path targetLocation = this.fileStorageLocation.resolve(subFolder).resolve(fileName);
-            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+            log.info("Bắt đầu tải file lên Cloudinary, thư mục: autorental/{}", subFolder);
+            Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
+                    "folder", "autorental/" + subFolder,
+                    "resource_type", "image"
+            ));
 
-            // Trả về URL để client mobile truy cập
-            return ServletUriComponentsBuilder.fromCurrentContextPath()
-                    .path("/uploads/")
-                    .path(subFolder + "/")
-                    .path(fileName)
-                    .toUriString();
+            String secureUrl = (String) uploadResult.get("secure_url");
+            log.info("Upload Cloudinary thành công! URL: {}", secureUrl);
+            return secureUrl;
         } catch (IOException ex) {
-            log.error("Lỗi khi lưu file: {}", ex.getMessage());
-            throw new RuntimeException("Không thể lưu file: " + fileName, ex);
+            log.error("Lỗi khi tải file lên Cloudinary: {}", ex.getMessage());
+            throw new RuntimeException("Không thể tải file lên Cloudinary: " + ex.getMessage(), ex);
         }
     }
 }
-

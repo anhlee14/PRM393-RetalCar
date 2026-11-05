@@ -5,6 +5,7 @@ import com.autorental.backend.exception.BadRequestException;
 import com.autorental.backend.exception.ResourceNotFoundException;
 import com.autorental.backend.model.*;
 import com.autorental.backend.repository.BookingRepository;
+import com.autorental.backend.repository.GpsLogRepository;
 import com.autorental.backend.repository.VehicleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ public class BookingService {
 
     private final BookingRepository bookingRepository;
     private final VehicleRepository vehicleRepository;
+    private final GpsLogRepository gpsLogRepository;
     private final NotificationService notificationService;
 
     @Transactional
@@ -34,6 +36,11 @@ public class BookingService {
 
         if (vehicle.getStatus() != VehicleStatus.AVAILABLE) {
             throw new BadRequestException("Xe hiện không sẵn sàng cho thuê");
+        }
+
+        // Nghiệp vụ: Chủ xe không được tự thuê xe do chính mình sở hữu
+        if (vehicle.getOwner() != null && vehicle.getOwner().getId().equals(renter.getId())) {
+            throw new BadRequestException("Chủ xe không thể tự thuê xe do chính mình sở hữu");
         }
 
         // Tính số ngày thuê (tối thiểu 1 ngày)
@@ -112,7 +119,24 @@ public class BookingService {
         Booking booking = getBookingById(bookingId);
         booking.setStatus(BookingStatus.ONGOING);
         booking.setLastRenterGpsPing(LocalDateTime.now());
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+
+        // Khởi tạo điểm tọa độ GPS xuất phát tại vị trí nhận xe nếu chưa có điểm nào
+        if (gpsLogRepository.findFirstByBookingIdOrderByRecordedAtDesc(bookingId).isEmpty()) {
+            Vehicle vehicle = booking.getVehicle();
+            double startLat = (vehicle.getCurrentLat() != null) ? vehicle.getCurrentLat() : 21.028511;
+            double startLng = (vehicle.getCurrentLng() != null) ? vehicle.getCurrentLng() : 105.804817;
+
+            GpsLog initialLog = GpsLog.builder()
+                    .booking(saved)
+                    .latitude(startLat)
+                    .longitude(startLng)
+                    .speed(0.0)
+                    .build();
+            gpsLogRepository.save(initialLog);
+        }
+
+        return saved;
     }
 
     @Transactional
@@ -137,4 +161,3 @@ public class BookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt xe với ID: " + id));
     }
 }
-
