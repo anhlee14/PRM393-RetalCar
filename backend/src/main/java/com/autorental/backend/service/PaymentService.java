@@ -106,7 +106,7 @@ public class PaymentService {
 
         // 3. Phân tích mã Booking ID từ nội dung
         Long bookingId = null;
-        Pattern pattern = Pattern.compile("(?i)(?:AUTORENTAL\\s+)?BK\\s*(\\d+)");
+        Pattern pattern = Pattern.compile("(?i)(?:AUTORENTAL\\s+)?#?BK[-_\\s]*(\\d+)");
         Matcher matcher = pattern.matcher(content);
         if (matcher.find()) {
             bookingId = Long.parseLong(matcher.group(1));
